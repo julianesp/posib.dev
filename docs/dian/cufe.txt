@@ -1,0 +1,685 @@
+                                                       Resolución No. 000165 (01/NOV/2023)
+documentos electrónicos entre los participantes en las operaciones de compraventa de bienes y servicios. Los ingenieros de software del OFE
+deberán conocer este documento, y se advierte que los detalles de las técnicas informáticas de implementación del CUFE se describen en esta
+sección.
+
+
+
+      11.2 Generación de CUFE
+El CUFE, permite identificar unívocamente una factura electrónica en el territorio nacional, lo cual se logra por medio de la generación de un código
+único usando una función one-way hash.
+Para la generación del CUFE se debe utilizar el algoritmo SHA-384 que garantiza que dos (2) cadenas de texto no generarán el mismo hash. En
+expresión matemática tenemos que el Código Único de la Factura Electrónica es:
+
+NumFac                       Número de factura. (Prefijo concatenado con el número de la factura)
+FecFac                       Fecha de factura.
+HorFac                       Hora de la factura incluyendo GMT.
+                             Valor de la Factura sin Impuestos, con punto decimal, con decimales a dos (2) dígitos
+ValFac
+                             truncados, sin separadores de miles, ni símbolo pesos.
+CodImp1                      01 Este valor es fijo.
+                             Valor impuesto 01 - IVA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp1                      separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 01 – IVA este
+                             valor se representa con 0.00
+CodImp2                      04 Este valor es fijo.
+                             Valor impuesto 04 - Impuesto Nacional al Consumo, con punto decimal, con decimales a
+ValImp2                      dos (2) dígitos truncados, sin separadores de miles, ni símbolo pesos. Si No está
+                             referenciado el impuesto 04- INC este valor se representa con 0.00
+CodImp3                      03 Este valor es fijo.
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                   Página 655 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                             Valor impuesto 03 - ICA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp3                      separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 03 - ICA este
+                             valor se representa con 0.00
+                             Valor Total, con punto decimal, con decimales a dos (2) dígitos truncados, sin separadores
+ValTot
+                             de miles, ni símbolo pesos.
+NitFE                        NIT del Facturador Electrónico sin puntos ni guiones, sin digito de verificación.
+NumAdq                       Número de identificación del adquiriente sin puntos ni guiones, sin digito de verificación.
+ClTec                        Clave técnica del rango de facturación.
+                             Número de identificación del ambiente utilizado por el contribuyente para emitir la factura
+TipoAmbiente
+                             validar el numeral 0.
+Composición del CUFE = SHA-384(NumFac + FecFac + HorFac + ValFac + CodImp1 + ValImp1 + CodImp2 + ValImp2 + CodImp3 + ValImp3 + ValTot +
+NitOFE + NumAdq + ClTec + TipoAmbie)
+Donde + significa la concatenación de las cadenas de caracteres.
+
+
+
+
+                       11.2.1 Ejemplo de CUFE para Factura electrónica de venta
+Teniendo en cuenta los siguientes datos de entrada, se presenta el resultado del CUFE para el cálculo de los siguientes documentos.
+    • Factura electrónica de venta
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                      Página 656 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+  •      Factura electrónica de venta – exportación
+  •      Factura electrónica de Venta - tipo 04
+
+                                                                               Ejemplo: CUFE de una factura-e de venta: SHA384
+NumFac                           323200000129
+FecFac                           2019-01-16
+HorFac                           10:53:10-05:00
+ValFac                           1500000.00
+CodImp1                          01
+ValImp1                          285000.00
+CodImp2                          04
+ValImp2                          0.00
+CodImp3                          03
+ValImp3                          0.00
+ValTotFac                        1785000.00
+NitOFE                           700085371
+NumAdq                           800199436
+ClTec                            693ff6f2a553c3646a063436fd4dd9ded0311471
+TipoAmbiente                     1
+Composición del                  (3232000001292019-01-1610:53:10-
+CUFE                             05:001500000.0001285000.00040.00030.001785000.00700085371800199436693ff6f2a553c3646a063436fd4dd9ded03114711)
+CUFE.SHA384                      8bb918b19ba22a694f1da11c643b5e9de39adf60311cf179179e9b33381030bcd4c3c3f156c506ed5908f9276f5bd9b4
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                 Página 657 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                                                                               Ejemplo: CUFE de una factura-e de venta: SHA384
+                                 Destino: /Invoice/cbc:UUID
+                            Ref: http:/www.sha1-online.com/
+                       11.2.2 XPath
+De forma no ambigua se especifican las expresiones XPath que deben aplicarse a una factura electrónica para obtener la información requerida y
+permitir la generación del CUFE.
+Definición CUFE de una factura de venta.
+
+NumFac                            /Invoice/cbc:ID
+FecFac                            /Invoice/cbc:IssueDate/
+Hora Factura                      /Invoice/cbc:IssueTime/
+Valor Bruto                       /Invoice/cac:LegalMonetaryTotal/cbc:LineExtensionAmount/
+CodImp1                           /Invoice/cacTaxTotal[x]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 01
+Valor Impuesto 1                  /Invoice/cac:TaxTotal[x]/cbc:TaxAmount
+CodImp2                           /Invoice/cac:TaxTotal[y]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 04
+Valor Impuesto 2                  /Invoice/cac:TaxTotal[y]/cbc:TaxAmount
+CodImp3                           /Invoice/cac:TaxTotal[z]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 03
+Valor Impuesto 3                  /Invoice/cac:TaxTotal[z]/cbc:TaxAmount
+Valor Total a Pagar               /Invoice/cac:LegalMonetaryTotal/cbc:PayableAmount/
+NitOFE                            /Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID/
+NumAdq                            /Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID/
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                 Página 658 de 753
+                                                        Resolución No. 000165 (01/NOV/2023)
+
+                                   La clave técnica se encuentra en la consultar del rango de numeración que se hacer a través del
+ClTec
+                                   Web Service, la cual No está expuesto dentro del XML
+Tipo de Ambiente                   /Invoice/cbc:ProfileExecutionID
+
+        11.3 Consideraciones Generales del CUDE
+El presente documento presenta la especificación técnica para la generación del Código Único de Documento Electrónico – CUDE, que es utilizado con
+varios propósitos, entre ellos:
+•       Como un mecanismo tecnológico de control para validar la integridad y autenticidad de Informaciones claves del ejemplar de la factura
+electrónica de venta y los documentos electrónicos derivados de la misma.
+El CUDE tal como se calcula en esta especificación técnica está indicado y referenciado para las instancias o ejemplares que contienen datos con la
+sintaxis y la semántica de operaciones mercantiles y que se producen para dejar registro electrónico de la ocurrencia de las mismas. Las instancias
+corresponden a los siguientes documentos que forman parte de los perfiles de transacciones comerciales para la DIAN:
+•         Documento electrónico de transmisión
+•         Notas crédito
+•         Notas débito
+•         Application Response
+Para todos los documentos de los perfiles de transacciones comerciales para la DIAN se incluirá la etiqueta <cbc:UUID/>. Este identificador y el
+atributo están localizados en la siguiente ruta:
+XPath :
+•         ../cbc:UUID
+•. /cbc:UUID/@schemeName tendrá el valor indicado en la sección 0
+La etiqueta contendrá el resultado del cálculo especificado en esta sección.
+Esta especificación suministra la información que sobre el CUDE que deberá aplicar el OFE como medida de la ampliación del proceso de generación
+de los documentos electrónicos. Los mecanismos de esta medida facilitarán la inclusión de evidencias de validez de la firma digital avanzada así el FE o
+          Dirección de Gestión de Impuestos
+          Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+          Código postal 111711
+          www.dian.gov.co
+          Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                     Página 659 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+quien verifique la validez de la firma intente repudiar la factura electrónica posteriormente, haciendo más confiable la circulación de los documentos
+electrónicos entre los participantes en las operaciones de compraventa de bienes y servicios.
+
+      11.4 Generación de CUDE
+El CUDE, permite identificar unívocamente un documento electrónico en el territorio nacional, lo cual se logra por medio de la generación de un
+código único usando una función one-way hash. Para la generación del CUDE se debe utilizar el algoritmo SHA-384 que garantiza que dos (2) cadenas
+de texto no generarán el mismo hash. En expresión matemática tenemos que el Código Único de Documento Electrónico el cálculo de 3 modelos
+diferentes los cuales se indicaran a continuación.
+                       11.4.1 Ejemplo de CUDE para Documento electrónico de transmisión
+
+NumFac                       Número de factura. (prefijo concatenado con el número de la factura)
+FecFac                       Fecha de factura.
+HorFac                       Hora de la factura incluyendo GMT.
+                             Valor de la Factura sin Impuestos, con punto decimal, con decimales a dos (2) dígitos
+ValFac
+                             truncados, sin separadores de miles, ni símbolo pesos.
+CodImp1                      01 Este valor es fijo.
+                             Valor impuesto 01 - IVA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp1                      separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 01 – IVA este
+                             valor se representa con 0.00
+CodImp2                      04 este valor es fijo.
+                             Valor impuesto 04 - Impuesto Nacional al Consumo, con punto decimal, con decimales a dos
+ValImp2                      (2) dígitos truncados, sin separadores de miles, ni símbolo pesos. Si No está referenciado el
+                             impuesto 04- INC este valor se representa con 0.00
+CodImp3                      03 este valor es fijo.
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                    Página 660 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                             Valor impuesto 03 - ICA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp3                      separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 03 - ICA este
+                             valor se representa con 0.00
+                             Valor Total, con punto decimal, con decimales a dos (2) dígitos truncados, sin separadores
+ValTot
+                             de miles, ni símbolo pesos.
+NitFE                        NIT del Facturador Electrónico sin puntos ni guiones, sin digito de verificación.
+NumAdq                       Número de identificación del adquiriente sin puntos ni guiones, sin digito de verificación.
+                             Pin del software registrado en el catálogo del participante, el cual No está expresado en el
+Software-PIN
+                             XML
+                             Número de identificación del ambiente utilizado por el contribuyente para emitir la factura
+TipoAmbiente
+                             validar el numeral 0.
+Composición del CUDE = SHA-384(NumFac + FecFac + HorFac + ValFac + CodImp1 + ValImp1 + CodImp2 + ValImp2 + CodImp3 + ValImp3 + ValTot +
+NitOFE + NumAdq + Software-PIN + TipoAmbie)
+                       Donde + significa la concatenación de las cadenas de caracteres.
+
+
+                                                Ejemplo: CUDE de la transcripción de datos de un Documento Electrónica de transmisión: SHA384
+                                                                                          /Invoice/cbc:InvoiceTypeCode=03
+NumFac                               8110007871
+
+FecFac                               2019-02-20
+
+HorFac                               16:46:55-05:00
+
+ValFac                               235.28
+
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                                Página 661 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                                                Ejemplo: CUDE de la transcripción de datos de un Documento Electrónica de transmisión: SHA384
+CodImp1                              01
+
+ValImp1                              19.00
+
+CodImp2                              04
+
+ValImp2                              0.00
+
+CodImp3                              03
+
+ValImp3                              8.28
+
+ValTol                               262.56
+
+NitOFE                               900373076
+
+NumAdq                               8355990
+
+Software-PIN                         12345
+
+TipoAmbiente                         2
+
+Composición del CUFE                 81100078712019-02-2016:46:55-05:00235.280119.00040.00038.28262.569003730768355990123452
+
+                                     955327eb55f8bdf16d069358a063d87e1577a292cb088ec186ed60bbc38e750b7b3980659b278ead789b95f9c51a9ef7
+                                     Destino: /fe:Invoice/cbc:UUID
+CUFE.SHA-384
+                                     Ref: http:/www.sha1-online.com/
+
+   Nota-1: las verificaciones sobre la autorización del rango de numeración se realizan respecto a la numeración de contingencia siempre y cuando el
+   «/Invoice/cbc:InvoiceTypeCode=03»
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                                Página 662 de 753
+                                                        Resolución No. 000165 (01/NOV/2023)
+    Nota-2: las transcripciones de datos de una factura de contingencia no utilizan la Clave técnica durante el cálculo del CUDE, para el reemplazo del
+    mismo se utiliza el PIN del software el cual se indica en el catálogo del participante y este se registra en el elemento /fe:Invoice/cbc:UUID, debido
+    a que a este rango autorizado no se le asigna una clave técnica.
+                        11.4.2 XPath
+De forma no ambigua se especifican las expresiones XPath que deben aplicarse a la transcripción de una factura de contingencia para obtener la
+información requerida y permitir la generación del identificador.
+Definición del identificador de una factura de contingencia.
+
+ NumFac                 /Invoice/cbc:ID
+ FecFac                 /Invoice/cbc:IssueDate
+ HorFac                 /Invoice/cbc:IssueTime
+ ValFac                 /Invoice/cac:LegalMonetaryTotal/cbc:LineExtensionAmount
+ CodImp1                /Invoice/cacTaxTotal[x]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 01
+ ValImp1                /Invoice/cac:TaxTotal[x]/cbc:TaxAmount
+ CodImp2                /Invoice/cac:TaxTotal[y]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 04
+ ValImp2                /Invoice/cac:TaxTotal[y]/cbc:TaxAmount
+ CodImp3                /Invoice/cac:TaxTotal[z]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 03
+ ValImp3                /Invoice/cac:TaxTotal[z]/cbc:TaxAmount
+ ValTol                 / Invoice/cac:LegalMonetaryTotal/cbc:PayableAmount
+ NitOFE                 /Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID
+ NumAdq                 /Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID
+ Software-PIN No está en el XML
+ TipoAmb                /Invoice/cbc:ProfileExecutionID
+          Dirección de Gestión de Impuestos
+          Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+          Código postal 111711
+          www.dian.gov.co
+          Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                       Página 663 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+                       11.4.3Ejemplo de Identificador universal para Nota crédito
+
+NumFac                       Número de factura. (prefijo concatenado con el número de la factura)
+FecFac                       Fecha de factura.
+HorFac                       Hora de la factura incluyendo GMT.
+                             Valor de la Factura sin Impuestos, con punto decimal, con decimales a dos (2) dígitos
+ValFac
+                             truncados, sin separadores de miles, ni símbolo pesos.
+CodImp1                      01 este valor es fijo.
+                             Valor impuesto 01 - IVA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp1                      separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 01 – IVA este
+                             valor se representa con 0.00
+CodImp2                      04 este valor es fijo.
+                             Valor impuesto 04 - Impuesto Nacional al Consumo, con punto decimal, con decimales a dos
+ValImp2                      (2) dígitos truncados, sin separadores de miles, ni símbolo pesos. Si No está referenciado el
+                             impuesto 04- INC este valor se representa con 0.00
+CodImp3                      03 este valor es fijo.
+                             Valor impuesto 03 - ICA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp3                      separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 03 - ICA este
+                             valor se representa con 0.00
+                             Valor Total, con punto decimal, con decimales a dos (2) dígitos truncados, sin separadores
+ValTot
+                             de miles, ni símbolo pesos.
+NitFE                        NIT del Facturador Electrónico sin puntos ni guiones, sin digito de verificación.
+NumAdq                       Número de identificación del adquiriente sin puntos ni guiones, sin digito de verificación.
+
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                             Página 664 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                             Pin del software registrado en el catálogo del participante, el cual No está expresado en el
+Software-PIN
+                             XML
+                             Número de identificación del ambiente utilizado por el contribuyente para emitir la factura
+TipoAmbiente
+                             validar el numeral 0.
+
+
+                                                                           Ejemplo: identificador universal de una Nota crédito: SHA384
+NumCr                                8110007871
+FecCr                                2019-01-12
+HorCr                                07:00:00-05:00
+VaCRL                                5000.00
+CodImp1                              01
+ValImp1                              950.00
+CodImp2                              04
+ValImp2                              0.00
+CodImp3                              03
+ValImp3                              0.00
+ValTot                               5950.00
+NitOFE                               900373076
+NumAdq                               8355990
+Software-PIN                         12301
+TipoAmbiente                         1
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                          Página 665 de 753
+                                                      Resolución No. 000165 (01/NOV/2023)
+
+                                                                          Ejemplo: identificador universal de una Nota crédito: SHA384
+Composición del
+                                    81100078712019-01-1207:00:00-05:005000.0001950.00040.00030.005950.009003730768355990123011
+CUDE
+                                    907e4444decc9e59c160a2fb3b6659b33dc5b632a5008922b9a62f83f757b1c448e47f5867f2b50dbdb96f48c7681168
+CUDE.SHA-384                        Destino: /CreditNote/cbc:UUID
+                                    Ref: http:/www.sha1-online.com/
+
+
+                      11.4.4 XPath
+El CUDE, permite identificar unívocamente una factura electrónica en el territorio nacional, lo cual se logra por medio de la generación de un código
+único usando una función one-way hash.
+Para la generación del CUDE se debe utilizar el algoritmo SHA-384 que garantiza que dos (2) cadenas de texto no generarán el mismo hash. En
+expresión matemática tenemos que el Código Único de Documento Electrónica es:
+
+ NumFac               /CreditNote/cbc:ID
+ FecFac               /CreditNote/cbc:IssueDate
+ HorFac               /CreditNote/cbc:IssueTime
+ ValFac               /CreditNote/cac:LegalMonetaryTotal/cbc:LineExtensionAmount
+ CodImp1              /CreditNote/cac:TaxTotal[x]/cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 01
+ ValImp1              /CreditNote/cac:TaxTotal[x]/cbc:TaxAmount
+ CodImp2              /CreditNote/cac:TaxTotal[y]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 04
+ ValImp2              /CreditNote/cac:TaxTotal[y]/cbc:TaxAmount
+ CodImp3              /CreditNote/cac:TaxTotal[z]/ cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 03
+
+        Dirección de Gestión de Impuestos
+        Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+        Código postal 111711
+        www.dian.gov.co
+        Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                         Página 666 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+ValImp3                /CreditNote/cac:TaxTotal[z]/cbc:TaxAmount
+ValTol                 /CreditNote/cac:LegalMonetaryTotal/cbc:PayableAmount
+NitOFE                 /CreditNote/cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID
+NumAdq                 /CreditNote/cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID
+Software-PIN No se encuentra en el XML
+TipoAmb                /CreditNote/dcc:ProfileExecutionID
+                       11.4.5 Ejemplo de Identificador universal para Nota débito
+
+NumFac                        Número de factura. (prefijo concatenado con el número de la factura)
+FecFac                        Fecha de factura.
+HorFac                        Hora de la factura incluyendo GMT.
+                              Valor de la Factura sin Impuestos, con punto decimal, con decimales a dos (2) dígitos
+ValFac
+                              truncados, sin separadores de miles, ni símbolo pesos.
+CodImp1                       01 este valor es fijo.
+                              Valor impuesto 01 - IVA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp1                       separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 01 – IVA este valor
+                              se representa con 0.00
+CodImp2                       04 este valor es fijo.
+                              Valor impuesto 04 - Impuesto Nacional al Consumo, con punto decimal, con decimales a dos
+ValImp2                       (2) dígitos truncados, sin separadores de miles, ni símbolo pesos. Si No está referenciado el
+                              impuesto 04- INC este valor se representa con 0.00
+CodImp3                       03 este valor es fijo.
+
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                Página 667 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                              Valor impuesto 03 - ICA, con punto decimal, con decimales a dos (2) dígitos truncados, sin
+ValImp3                       separadores de miles, ni símbolo pesos. Si No está referenciado el impuesto 03 - ICA este valor
+                              se representa con 0.00
+                              Valor Total, con punto decimal, con decimales a dos (2) dígitos truncados, sin separadores de
+ValTot
+                              miles, ni símbolo pesos.
+NitFE                         NIT del Facturador Electrónico sin puntos ni guiones, sin digito de verificación.
+NumAdq                        Número de identificación del adquiriente sin puntos ni guiones, sin digito de verificación.
+Software-PIN                  Pin del software registrado en el catálogo del participante, el cual No está expresado en el XML
+                              Número de identificación del ambiente utilizado por el contribuyente para emitir la factura
+TipoAmbiente
+                              validar el numeral 0.
+
+
+                                                                           Ejemplo: identificador universal de una Nota Debito: SHA384
+NumDb                                ND1001
+FecDb                                2019-01-18
+HorDb                                10:58:00-05:00
+ValDb                                30000.00
+CodImp1                              01
+ValImp1                              0.00
+CodImp2                              04
+ValImp2                              2400.00
+CodImp3                              03
+ValImp3                              0.00
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                         Página 668 de 753
+                                                       Resolución No. 000165 (01/NOV/2023)
+
+                                                                           Ejemplo: identificador universal de una Nota Debito: SHA384
+ValTot                               32400.00
+NitOFE                               900197264
+NumAdq                               10254102
+Software-PIN                         10201
+TipoAmbiente                         2
+Composición del
+                                     ND10012019-01-1810:58:00-05:0030000.00010.00042400.00030.0032400.0090019726410254102102012
+CUDE
+                                     b9483dc2a17167feedf37b6bd67c4204e7b601933e0e389cffbd545e4d0ec370b403cbb41ff656776cb6cb5d8348ecd4
+CUDE.SHA-384                         Destino: /de:DebitNote/cbc:UUID
+                               Ref: http:/www.sha1-online.com/
+                       11.4.6 Xpath
+De forma no ambigua se especifican las expresiones XPath que deben aplicarse a una Nota débito para obtener la información requerida y permitir la
+generación del CUDE.
+Definición CUDE de una Nota Debito
+
+ NumFac                         /DebitNote/cbc:ID
+ FecFac                         /DebitNote/cbc:IssueDate
+ HorFac                         /DebitNote/cbc:IssueTime
+ ValFac                         /DebitNote/cac:RequestedMonetaryTotal/cbc:LineExtensionAmount
+ CodImp1                        /DebitNote/cac:TaxTotal[x]/cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 01
+ ValImp1                        /DebitNote/cac:TaxTotal[x]/cbc:TaxAmount
+
+
+         Dirección de Gestión de Impuestos
+         Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+         Código postal 111711
+         www.dian.gov.co
+         Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                         Página 669 de 753
+                                                        Resolución No. 000165 (01/NOV/2023)
+
+ CodImp2                         /DebitNote/cac:TaxTotal[y]/cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 04
+ ValImp2                         /DebitNote/cac:TaxTotal[y]/cbc:TaxAmount
+ CodImp3                         /DebitNote/cac:TaxTotal[z]/cac:TaxSubtotal/cac:TaxCategory/cac:TaxScheme/cbc:ID = 03
+ ValImp3                         /DebitNote/cac:TaxTotal[z]/cbc:TaxAmount
+ ValTol                          /DebitNote/cac:RequestedMonetaryTotal/cbc:PayableAmount
+ NitOFE                          /DebitNote/cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID
+ NumAdq                          /DebitNote/cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID
+Software-PIN                     No se encuentra en el XML
+ TipoAmbiente                    /DebitNote/cbc:ProfileExecutionID
+
+
+
+      11.5 Generación del CUDE para el ApplicationResponse
+Con el propósito de evitar utilizaciones indebidas de este IDENTIFICADOR Universal en documentos electrónicos que serán sometidos a la Validación
+Previa que realizará el sistema de factura electrónica de la DIAN, se debe incluir el valor del “software PIN” en la última posición de la cadena; este
+“software PIN” fue asignado por el participante obligado a registrar su sistema de software en el Catálogo-DIAN, quien debe darle el tratamiento de
+“valor reservado”, y de “circulación restringida”.
+Se preverá la excepción para los participantes no obligados a registrar software en el Catálogo-DIAN, interesados en presentar a la DIAN solicitudes de
+procesamiento de ubl-ApplicationResponse.
+                                    Campo                                                  Descripción: participante con “software PIN”
+
+                      Num_DE                                  Número del Documento Electrónico ApplicationResponse
+                      Fec_Emi                                 Fecha de emisión del DE ApplicationResponse
+                      Hor_Emi                                 Hora de emisión incluyendo GMT.
+
+
+          Dirección de Gestión de Impuestos
+          Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+          Código postal 111711
+          www.dian.gov.co
+          Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                          Página 670 de 753
+                                                      Resolución No. 000165 (01/NOV/2023)
+
+                                  Campo                                                  Descripción: participante con “software PIN”
+
+                    NitFE                                   Documento de la Persona o institución que genera el evento
+                    DocAdq                                  Documento de la Persona que recibe este ApplicationResponse
+                    ResponseCode                            Código del evento registrado en este ApplicationResponse
+                    ID                                      Prefijo y Número del documento referenciado
+                    DocumentTypeCode Identificador del tipo de documento referenciado
+                                     • No está incluido dentro del documento XML.
+                                     • Valor reservado, de circulación restringida, asignado por quien
+                    Software-PIN
+                                         obtuvo el Código de Activación del software en el sistema
+                                         Validación Previa de Factura Electrónica - DIAN
+
+
+                      11.5.1 Ejemplo de CUDE para Application Response con Sotfware PIN
+Teniendo en cuenta los siguientes datos de entrada, se presenta el resultado del CUDE para
+
+Num_DE                            1
+
+Fec_Emi                           2019-04-30
+
+Hor_Emi                           19:48:50-05:00
+NitFE                             99998888
+DocAdq                            800197268
+ResponseCode                      030
+ID                                FE123
+DocumentTypeCode 01
+
+        Dirección de Gestión de Impuestos
+        Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+        Código postal 111711
+        www.dian.gov.co
+        Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                        Página 671 de 753
+                                                        Resolución No. 000165 (01/NOV/2023)
+
+Software-PIN                        11111
+Composición del                     12019-04-3019:48:50-05:0099998888800197268030FE1230111111
+CUDE
+CUDE.SHA384                         0d91ba25b01f5e7dbda870a11b274501d3a62a73e91932c473c86c93f12a142a2ac45876efcde3e679024a01c0be41f9
+                        11.5.2 XPath
+De forma no ambigua se especifican las expresiones XPath que deben aplicarse a un documento electrónico para obtener la información requerida y
+permitir la generación del CUDE.
+Definición CUDE de un documento electrónico.
+
+      Campo                                                                                Xpath
+Num_DE                        /ApplicationResponse/cbc:ID
+Fec_Emi                       /ApplicationResponse/cbc:IssueDate
+Hor_Emi                       /ApplicationResponse/cbc:IssueTime
+CompanyID                     /ApplicationResponse/cac:SenderParty/cac:PartyTaxScheme/cbc:CompanyID
+CompanyID                     /ApplicationResponse/cac:ReceiverParty/cac:PartyTaxScheme/cbc:CompanyID
+ResponseCode                  /ApplicationResponse/cac:DocumentResponse/cac:Response/cbc:ResponseCode
+ID                            /ApplicationResponse/cac:DocumentResponse/cac:DocumentReference/cbc:ID
+DocumentTypeCode /ApplicationResponse/cac:DocumentResponse/cac:DocumentReference/cbc:DocumentTypeCode
+Software-PIN                  No se encuentra en el XML
+
+
+      11.6 Localización De La Clave Técnica «Cltec»
+La clave técnica está asociada al Rango de Facturación del que tomó el prefijo y el número de la factura electrónica que será firmada; un medio de ayuda
+es el documento denominado Guía de usuario externo facturador electrónico.
+
+
+          Dirección de Gestión de Impuestos
+          Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+          Código postal 111711
+          www.dian.gov.co
+          Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                     Página 672 de 753
+                                                      Resolución No. 000165 (01/NOV/2023)
+Examine la Autorización expedida por la DIAN que definió el Rango de Facturación; examine el numeral 0 y el archivo wsdl que lo acompaña. En el
+archivo response los rangos vienen acompañado de un identificador denominado clave técnica: ese es el valor que estamos necesitando.
+
+Asegúrese de que el prefijo de dicho rango fue asociado al NIT del proveedor de la versión de software i.e. el OFE o el PT según el caso— de acuerdo
+con lo registrado en los servicios del sistema de facturación electrónica de la DIAN; de esta manera cuando el OFE o el PT entreguen a la DIAN la factura
+expedida, el mecanismo de control fiscal validará que este documento electrónico fue generado por un sistema de software activo en el sistema de
+facturación electrónica a nombre del OFE o del PT que expide la factura, y podrá recuperar el rango autorizado y la clave técnica asignada. Con estos
+últimos el mecanismo de control fiscal validará que la factura está consumiendo elementos del rango, y podrá aplicar el algoritmo de cálculo del CUFE.
+
+ADVERTENCIA: Cuando un Facturador Electrónico haya agotado el rango de numeración que le fue asignado y deba solicitar la autorización de un nuevo
+rango de numeración para facturas electrónicas que sea la continuación de un rango ya autorizado, se debe tener en cuenta, que el SIE Rangos de
+Numeración cuando haga la consulta del web Service, le entregará una nueva CLAVE TÉCNICA, esta CLAVE TÉCNICA, es diferente a la del anterior rango.
+
+                     11.7 Código Bidimensional «QR»
+Para la representación gráfica de los documentos e instrumentos electrónicos, es requisito la generación de un código QR con la siguiente
+información:
+
+ Detalle                                             XPath
+
+ NumFac:                                             /root/cbc:ID
+ [NUMERO_FACTURA]
+ FecFac: [FECHA_FACTURA]                             /root/cbc:IssueDate
+
+ HorFac:                                             /root/cbc:IssueTime
+ [HORA_FACTURA(con GMT)]
+                                                     /root/cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyI
+ NitFac: [NIT FACTURADOR]                            D
+
+
+        Dirección de Gestión de Impuestos
+        Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+        Código postal 111711
+        www.dian.gov.co
+        Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                      Página 673 de 753
+

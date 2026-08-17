@@ -1,0 +1,507 @@
+                                                      Resolución No. 000165 (01/NOV/2023)
+La política de firma suministra la información sobre la firma digital, de acuerdo con lo previsto en el artículo 1.6.1.4.15. Validación de la factura
+electrónica de venta, las notas débito, notas crédito y demás documentos electrónicos del Decreto 1625 del 2016 Único Reglamentario en Materia
+Tributaria.
+
+      10.3 Especificaciones técnicas sobre la Firma Digital Avanzada
+ETSI TS 101 903, v.1.2.2. v 1.3.2. y 1.4.1. Electronic Signatures and Infrastructures (SEI); XML Advanced Electronic Signatures (XAdES).
+ETSI TR 102 038, v.1.1.1. Electronic Signatures and Infraestructures (SEI); XML format for signature policies.
+ETSI TS 102 176-1 V2.0.0 Electronic Signatures and Infraestructures (ESI): Algorithms and Paremeters for Secure Electronic Signatures; Part 1: Hash
+functions and asymmetric algorithms.
+ETSI TR 102 041, v.1.1.1. Electronic Signatures and Infraestructures (SEI); Signature policies report.
+ETSI TR 102 045, v.1.1.1. Electronic Signatures and Infraestructures (SEI); Signature policy for extended business model.
+ETSI TR 102 272, v.1.1.1. Electronic Signatures and Infraestructures (SEI); ASN.1 format for signature policies.
+IETF RFC 2560, X.509 Public Key Infrastructure Online Certificate Status-Protocol-OCSP
+IETF RFC 3125, Electronic Signature Policies
+IETF RFC 5280, RFC 4325 y RFC 4630, Internet X.509 Public Key Infrastructure; Certificate and Certificate Revocation List (CRL) Profile.
+ITU-T Recommendation X.680 (1997): “Information technology – Abstract Syntax Notation One (ASN.1): Specification on basic notation”.
+
+
+
+      10.4 Alcance de la Política de Firma
+Este documento define la Política de Firma que detalla las condiciones generales para la validación de la factura electrónica y que deberán ser
+admitidas por todas las plataformas tecnológicas implicadas en el ciclo de facturación electrónica.
+
+
+
+
+        Dirección de Gestión de Impuestos
+        Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+        Código postal 111711
+        www.dian.gov.co
+        Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                     Página 640 de 753
+                                                      Resolución No. 000165 (01/NOV/2023)
+
+      10.5 Política de Firma
+
+                            10.5.1 Actores de la Firma
+Son actores: el Facturador Electrónico, el Adquiriente, el Proveedor Tecnológico, las Entidades de Certificación Digital – ECD.
+
+                            10.5.2 Formato de Firma
+Se debe utilizar el estándar XMLDSig enveloped con formato XAdES-EPES según la especificación técnica ETSI TS 101 903, versión 1.2.2, versión 1.3.2
+y versión 1.4.1 siendo obligatorio indicar la versión adoptada en las etiquetas XML, en las que se hace referencia al número de versión.
+El formato XAdES de firma digital avanzada adoptado por la DIAN para el uso de firma digital corresponde a la Directiva XAdES-EPES, con el certificado
+digital y toda la cadena de certificación (desde el certificado raíz) incluida en los elementos «ds:X509Data» y «ds:Object», y la política de firma, es
+decir este documento, como un hiperenlace en el elemento «xades:SignaturePolicyIdentifier».
+Se admiten como válidos los algoritmos de generación de hash, codificación en base64, firma, normalización y transformación definidos en el estándar
+XMLDSig.
+
+      10.6 Algoritmo de Firma
+El algoritmo de firma usado sobre el elemento «SignedInfo» (organizado previamente como establece el cánon) para la firma digital (que se adiciona
+al elemento «SignatureValue») de la factura electrónica puede ser cualquiera de los definidos en la especificación XML-Signature Syntax and
+Processing (http:/www.w3.org/TR/xmldsig-core2/#sec-Algorithms) que actualmente son:
+Recomendado RSAwithSHA256 http:/www.w3.org/2001/04/xmldsig-more#rsa-sha256
+Recomendado RSAwithSHA384 http:/www.w3.org/2001/04/xmldsig-more#rsa-sha384
+Recomendado RSAwithSHA512 http:/www.w3.org/2001/04/xmldsig-more#rsa-sha512
+
+
+
+
+        Dirección de Gestión de Impuestos
+        Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+        Código postal 111711
+        www.dian.gov.co
+        Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                    Página 641 de 753
+                                                     Resolución No. 000165 (01/NOV/2023)
+
+      10.7 Algoritmo de Organización de Datos según el Canon
+El algoritmo para organizar los datos según el canon usado sobre el elemento «SignedInfo» para la firma digital (que se adiciona al elemento
+«SignatureValue») de la factura electrónica es “Canonical XML (omits comments)”. Para esto se debe usar el valor “http:/www.w3.org/TR/2001/REC-
+xml-c14n-20010315” dentro del elemento «CanonicalizationMethod».
+                     NOTA: atienda lo dicho en la sección “8 Sobre el CANON de los documentos electrónicos y la validez de la firma digital”
+<ds:CanonicalizationMethod Algorithm="http:/www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+
+
+
+      10.8 Ubicación de la Firma
+La firma se ubicará dentro del documento electrónico en el XPath:
+||Invoice||DebitNote||Creditnote||ApplicationResponse||AttachedDocument/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent
+/ds:Signature/ds:SignatureValue Para mayor detalle de los elementos que componen la firma ver el numeral 6.10 de este documento.
+
+      10.9 Condiciones de la Firma
+El facturador electrónico o el proveedor tecnológico expresamente autorizado por este para hacerlo deberá aplicar la firma digital sobre el documento
+completo, con un certificado digital vigente y no revocado al momento de la firma.
+La firma se aplica a todos los elementos de la factura electrónica, los elementos contenidos dentro del elemento SignedProperties más la clave pública
+contenida en el elemento KeyInfo. Cada uno de estos se adiciona como referencia dentro del elemento SignedInfo.
+<ds:SignedInfo>
+              <ds:CanonicalizationMethod Algorithm="http:/www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+              <ds:SignatureMethod Algorithm="http:/www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+              <ds:Reference Id="xmldsig-50280329-cdf3-4bb7-9d8f-edd480c8079c-ref0" URI="">
+                   <ds:Transforms>
+                        <ds:Transform Algorithm="http:/www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+       Dirección de Gestión de Impuestos
+       Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+       Código postal 111711
+       www.dian.gov.co
+       Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                       Página 642 de 753
+                                                     Resolución No. 000165 (01/NOV/2023)
+                   </ds:Transforms>
+                   <ds:DigestMethod Algorithm="http:/www.w3.org/2001/04/xmlenc#sha256"/>
+                   <ds:DigestValue>vDUXUvy+JoIsT1k4dFv7ay8eJ+7jOMyRTcqiVKkdXHI=</ds:DigestValue>
+              </ds:Reference>
+              <ds:Reference URI="#xmldsig-50280329-cdf3-4bb7-9d8f-edd480c8079c-keyinfo">
+                   <ds:DigestMethod Algorithm="http:/www.w3.org/2001/04/xmlenc#sha256"/>
+                   <ds:DigestValue>O5Bin7GRCjlH8qG1BFc3Cd2GlFx+IAp5DoEpn3nArgk=</ds:DigestValue>
+              </ds:Reference>
+              <ds:Reference Type="http:/uri.etsi.org/01903#SignedProperties" URI="#xmldsig-50280329-cdf3-4bb7-9d8f-edd480c8079c-
+              signedprops">
+                   <ds:DigestMethod Algorithm="http:/www.w3.org/2001/04/xmlenc#sha256"/>
+                   <ds:DigestValue>scoM3Nb4cTlMm1GHP9ECfFetSUP+S9DqTVYVHW99KEw=</ds:DigestValue>
+              </ds:Reference>
+</ds:SignedInfo>
+El certificado público requerido para validar la firma debe ser embebido dentro del XPath:
+/fe:Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent
+/ds:Signature/ds:KeyInfo/ds:X509Data/ds:X509Certificate
+en formato base64:
+       <ds:KeyInfo Id="xmldsig-50280329-cdf3-4bb7-9d8f-edd480c8079c-keyinfo">
+           <ds:X509Data>
+                <ds:X509Certificate>
+
+
+       Dirección de Gestión de Impuestos
+       Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+       Código postal 111711
+       www.dian.gov.co
+       Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                            Página 643 de 753
+                                              Resolución No. 000165 (01/NOV/2023)
+              MIIHEjCCBfqgAwIBAgIQRMochPrzPAhYXX/wKSkB/DANBgkqhkiG9w0BAQsFADCBqDEcMBoGA1UECQwTd3d3LmNlcnRpY2FtYXJhLmN
+              vbTEPMA0GA1UEBwwGQk9HT1RBMRkwFwYDVQQIDBBESVNUUklUTyBDQVBJVEFMMQswCQYDVQQGEwJDTzEYMBYGA1UECwwPTk
+              lUIDgzMDA4NDQzMy03MRgwFgYDVQQKDA9DRVJUSUNBTUFSQSBTLkExGzAZBgNVBAMMEkFDIFNVQiBDRVJUSUNBTUFSQTAgFw0x
+              NjEyMjMxOTUwMDhaGA8yMDE4MTIyMzE5NTAwNVowggEZMRQwEgYDVQQIDAtCT0dPVEEgRC5DLjENMAsGA1UECwwERElBTjEPM
+              A0GA1UEBRMGNjQ0NjM1MRowGAYKKwYBBAGBtWMCAxMKODAwMTk3MjY4NDE7MDkGA1UECgwyVS5BLkUuIERJUkVDQ0lPTiBER
+              SBJTVBVRVNUT1MgWSBBRFVBTkFTIE5BQ0lPTkFMRVMxFDASBgNVBAcMC0JPR09UQSBELkMuMSgwJgYJKoZIhvcNAQkBFhlTQU5USU
+              FHT1JPSkFTQERJQU4uR09WLkNPMQswCQYDVQQGEwJDTzE7MDkGA1UEAwwyVS5BLkUuIERJUkVDQ0lPTiBERSBJTVBVRVNUT1MgW
+              SBBRFVBTkFTIE5BQ0lPTkFMRVMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCYyo2c1lRA4KgbH5mVB1fIhcZEKfTLP7Op
+              Ohsx9HfK8mbAM9tFv4Ep0wac8Vw2ChE1/McEFajbMA3pF+Ks4xVRaeTYqrlSXwPicR/R+F25zwhM4twYMg4+Bp7aXeGecY+gCfE2omfjY
+              4AIu9UlVWYGI+NWjJqktnCp/RomAWWgmJS8cZ6n4WIolWcUfts/OAflDJDr66WmohkEfpYSbQJ6D0z1qwUh0i79x6I4dQCaUw4HeNFw
+              We1RyZSPi15YUZ2glCPH22FhyMC2/83p8dMD0+Y8XNpk3IAaMrZZD+JnOUc3dvhO0LFHW1xniK6RrkHJNkHE3UxYaZ2SzhdbTi43AgMB
+              AAGjggLAMIICvDA2BggrBgEFBQcBAQQqMCgwJgYIKwYBBQUHMAGGGmh0dHA6Ly9vY3NwLmNlcnRpY2FtYXJhLmNvMCQGA1UdEQQ
+              dMBuBGVNBTlRJQUdPUk9KQVNARElBTi5HT1YuQ08wgecGA1UdIASB3zCB3DCBmQYLKwYBBAGBtWMyAQgwgYkwKwYIKwYBBQUHA
+              gEWH2h0dHA6Ly93d3cuY2VydGljYW1hcmEuY29tL2RwYy8wWgYIKwYBBQUHAgIwThpMTGltaXRhY2lvbmVzIGRlIGdhcmFudO1hcyBkZ
+              SBlc3RlIGNlcnRpZmljYWRvIHNlIHB1ZWRlbiBlbmNvbnRyYXIgZW4gbGEgRFBDLjA+BgsrBgEEAYG1YwoKATAvMC0GCCsGAQUFBwICMCE
+              aH0Rpc3Bvc2l0aXZvIGRlIGhhcmR3YXJlIChUb2tlbikwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCA/gwJwYDVR0lBCAwHgYIKwYB
+              BQUHAwEGCCsGAQUFBwMCBggrBgEFBQcDBDAdBgNVHQ4EFgQUxFbjYtGllLfoIB2sE5ThQbAkjyMwHwYDVR0jBBgwFoAUgHHMMpJY
+              dfQDITqrvhzTj/IgFe0wEQYJYIZIAYb4QgEBBAQDAgWgMIHXBgNVHR8Egc8wgcwwgcmggcaggcOGXmh0dHA6Ly93d3cuY2VydGljYW1h
+              cmEuY29tL3JlcG9zaXRvcmlvcmV2b2NhY2lvbmVzL2FjX3N1Ym9yZGluYWRhX2NlcnRpY2FtYXJhXzIwMTQuY3JsP2NybD1jcmyGYWh0dH
+              A6Ly9taXJyb3IuY2VydGljYW1hcmEuY29tL3JlcG9zaXRvcmlvcmV2b2NhY2lvbmVzL2FjX3N1Ym9yZGluYWRhX2NlcnRpY2FtYXJhXzIwMTQ
+              uY3JsP2NybD1jcmwwDQYJKoZIhvcNAQELBQADggEBAFjwIciRfKLmswvqI1gLtF0wroegzv6bHPF+pB9jJS+FLMdTXqh9OnvEh6cMrOL6Dn
+              pcpc6m9jeDn4dL9BdsMW3UFEur+QzbsL/H3bIVHXKFFmYPwaZZyD4xyEtyomSLtVe6LCV97Ojxg/Q48Kl3XORYC1FJySfW89CMUPdm2Q
+              vSiYO3EC7wgeyfTiPrLhRqS3F0dmjYsDRQRqK7QfWtmGLJWlEFb6EE5mFUNUMNDhAHF1quC12cWMpcbu3JfM9Khd74lz2GxvMvWww
+              dwBfX68bwwmfcRktVXDKq6X7z8MflfvdbOLz1IchxNa2AOqtqHtE/689WaOrHfeSSkzWVUAc=
+         </ds:X509Certificate>
+    </ds:X509Data>
+</ds:KeyInfo>
+
+
+Dirección de Gestión de Impuestos
+Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+Código postal 111711
+www.dian.gov.co
+Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                            Página 644 de 753
+                                                      Resolución No. 000165 (01/NOV/2023)
+
+      10.10 Identificador de la Política
+Configuración del Identificador de Política para certificados digitales tipo sha-2
+          •       xPath:
+                  /Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent/ds:Signature/ds:Object/xades:QualifyingProperties/xades:Signed
+                  Properties/xades:SignedSignatureProperties/xades:SignaturePolicyIdentifier/xades:SignaturePolicyId/xades:SigPolicyId/xades:Identifie
+                  r:=
+                  Valor:
+                  https:/facturaelectronica.dian.gov.co/politicadefirma/v2/politicadefirmav2.pdf
+          •       xPath
+                  /Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent/ds:Signature/ds:Object/xades:QualifyingProperties/xades:Signed
+                  Properties/xades:SignedSignatureProperties/xades:SignaturePolicyIdentifier/xades:SignaturePolicyId/xades:SigPolicyHash/ds:DigestM
+                  ethod/@Algorithm:=
+                  Valor:2 Opciones.
+          •       http:/www.w3.org/2001/04/xmlenc#sha256 o http:/www.w3.org/2001/04/xmlenc#sha512
+          •       xPath:
+                  /Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent/ds:Signature/ds:Object/xades:QualifyingProperties/xades:Signed
+                  Properties/xades:SignedSignatureProperties/xades:SignaturePolicyIdentifier/xades:SignaturePolicyId/xades:SigPolicyId/xades:Descripti
+                  on
+                  Valor: Política de firma para facturas electrónicas de la República de Colombia.
+
+      10.11Hora de Firma
+        Se debe especificar en formato xsd:dateTime la fecha y hora en que reclama el firmante haber firmado la factura electrónica.
+        <xades:SigningTime>2009-07-14T13:28:00+02:00</xades:SigningTime>
+                      NOTA: Es deber de los facturadores electrónicos que los sistemas computacionales que utilicen para el firmado de los documentos
+                      deberán estar sincronizados con el reloj de la Superintendencia de Industria y Comercio el cual determina la hora legal colombiana el
+                      cual puede consultar en la url http://horalegal.inm.gov.co/
+
+
+        Dirección de Gestión de Impuestos
+        Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+        Código postal 111711
+        www.dian.gov.co
+        Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                        Página 645 de 753
+                                                        Resolución No. 000165 (01/NOV/2023)
+
+        10.12 Firmante
+          El elemento xades:SignerRole contiene uno y sólo uno de los siguientes atributos:
+          • “supplier” cuando la firma de la factura la realiza el Obligado a Facturar.
+          • “third party” cuando la firma la realiza un Proveedor Tecnológico o el tercero que, en su caso, actué en su nombre.
+          <xades:SignerRole>supplier</xades:SignerRole>
+
+        10.13 Mecanismo de firma digital
+        El mecanismo de firma digital a que se refieren el artículo 7 de la Ley 527 de 1999 y el Decreto 2364 de 2012 será considerada en el negocio
+        electrónico denominado Facturación Electrónica de conformidad con la reglamentación emitida por la UAE DIAN para tal efecto.
+
+        10.14 Certificado digital desde la vigencia de la circular 03-2016 de la ONAC
+       Este documento incluye los argumentos que deberán usarse como valores de los parámetros de:
+             •       Los certificados digitales con no repudio previstos en el estándar RFC-5280, y que cumplan con la Ley de Comercio Electrónico de
+                     Colombia, que utilicen los facturadores electrónicos para firmar digitalmente los documentos desmaterializados del negocio de la
+                     Facturación Electrónica.
+             •       Los atributos que resuelven las ambigüedades de los elementos que conforman los documentos desmaterializados del negocio de la
+                     Facturación Electrónica, precisando las características criptográficas y empleadas para cumplir con la Ley de Comercio Electrónico de
+                     Colombia. Referencia: URL https:/es.wikipedia.org/wiki/SHA-2
+
+   Regla-1
+Lapso de Validez del certificado digital                                                   Expedido ANTES de octubre 1 de 2016 T00:00:00, y hasta la terminación de la vigencia
+
+Signature Algorithm                                                                        Valores válidos dentro del certificado digital:
+                                                                                           Sha1WithRSAEncryption
+                                                                                           sha224WithRSAEncryption
+
+          Dirección de Gestión de Impuestos
+          Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+          Código postal 111711
+          www.dian.gov.co
+          Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                                                      Página 646 de 753
+                                                          Resolución No. 000165 (01/NOV/2023)
+
+Lapso de Validez del certificado digital                                                     Expedido ANTES de octubre 1 de 2016 T00:00:00, y hasta la terminación de la vigencia
+
+                                                                                             sha256WithRSAEncryption
+                                                                                             sha384WithRSAEncryption
+                                                                                             sha512WithRSAEncryption
+X509v3 Key Usage: critical                                                                   Valores necesarios dentro del certificado digital:
+                                                                                             Digital Signature
+                                                                                             Non Repudiation
+
+Descripción:
+Estamos aplicando la reglamentación de la ONAC, URL http:/onac.org.co/anexos/documentos/TRANSICIRCULARES/2016circulares/circular03-
+2016.pdf
+Si el valor “Validity” del lapso de vigencia del certificado empezó antes de octubre 1 de 2016, la firma digital de la factura electrónica puede:
+    •   Emplear certificados digitales que hayan sido generados con resúmenes criptográficos del tipo SHA1
+    •   Que el fragmento SignedInfo al que se le aplicó el canon fue la entrada para calcular el resumen criptográfico que fue firmado digitalmente
+        con << http:/www.w3.org/2000/09/xmldsig#rsa-sha1 >>
+    •   La aplicación del algoritmo de firma digital de las facturas electrónicas depende del lapso de vigencia dentro del cual debió haber sido
+        generada y firmada, y del método de generación del certificado digital utilizado. No podrá existir una factura con fecha válida, i.e.
+        /Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent/ds:Signature/ds:Object/xades:QualifyingProperties/xades:SignedProper
+        ties/xades:SignedSignatureProperties/xades:SigningTime— diferente o por fuera del lapso de vigencia del certificado digital que se usó para
+        calcular la firma-digital.
+
+    El no cumplimiento de estos valores deberá registrarse como una firma digital fallida para el documento electrónico, motivada en:
+        •      Algoritmo de Firma del certificado digital (tipo SHA1) no previsto por la DIAN
+        •      Uso de la clave pública del certificado digital carece de los propósitos “firma digital” o “no repudio”.
+
+            Dirección de Gestión de Impuestos
+            Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+            Código postal 111711
+            www.dian.gov.co
+            Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                                                        Página 647 de 753
+                                                          Resolución No. 000165 (01/NOV/2023)
+
+Lapso de Validez del certificado digital                                                     Expedido ANTES de octubre 1 de 2016 T00:00:00, y hasta la terminación de la vigencia
+    Pueden estar presentes ambos motivos.
+
+    Si el lapso de validez inhabilita a
+    /de:Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent/ds:Signature/ds:Object/xades:QualifyingProperties/xades:SignedPropert
+    ies/xades:SignedSignatureProperties/xades:SigningTime, entonces deberá registrarse como una firma digital fallida para el documento
+    electrónico, motivada en:
+        •      Fecha de expedición del documento electrónico no corresponde con el lapso de vigencia del certificado digital.
+
+    Este motivo puede ser concurrente con los descritos en la celda anterior.
+
+  Regla-2
+
+Lapso de Validez del certificado                              Después de 30 de septiembre de 2016 T23:59:59
+digital
+
+Signature Algorithm                                           Valores válidos dentro del certificado digital:
+                                                               sha256WithRSAEncryption
+                                                               sha384WithRSAEncryption
+                                                               sha512WithRSAEncryption
+X509v3 Key Usage: critical                                    Valores necesarios dentro del certificado digital:
+                                                              Digital Signature
+                                                              Non Repudiation
+
+Descripción:
+Estamos aplicando la reglamentación de la ONAC, URL
+http:/onac.org.co/anexos/documentos/TRANSICIRCULARES/2016circulares/circular03-2016.pdf
+
+            Dirección de Gestión de Impuestos
+            Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+            Código postal 111711
+            www.dian.gov.co
+            Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                                                        Página 648 de 753
+                                                          Resolución No. 000165 (01/NOV/2023)
+
+Lapso de Validez del certificado                              Después de 30 de septiembre de 2016 T23:59:59
+digital
+Si el valor “Validity” del lapso de vigencia del certificado empezó después del 30 de septiembre de 2016 T23:59:59,
+la firma digital de la factura electrónica tiene que:
+    •   Emplear certificados digitales que hayan sido generados con resúmenes criptográficos del tipo SHA256;
+        existen otras opciones como aparece en la lista << Signature Algorithm >>
+    •   Que el resumen criptográfico que se aplicó al fragmento que fue firmado digitalmente corresponda con el
+        << SignatureMethod >> empleado
+
+    El no cumplimiento de estos valores deberá registrarse como una firma digital fallida para el documento
+    electrónico, motivada en:
+        •      Algoritmo de Firma del certificado digital (tipo SHA2) no previsto por la DIAN
+        •      Uso de la clave pública del certificado digital carece de los propósitos “firma digital” o “no repudio”.
+               Vea Anexo 2.
+
+Pueden estar presentes ambos motivos.
+
+    Si el lapso de validez inhabilita a
+    /Invoice/ext:UBLExtensions/ext:UBLExtension/ext:ExtensionContent/ds:Signature/ds:Object/xades:Qualifying
+    Properties/xades:SignedProperties/xades:SignedSignatureProperties/xades:SigningTime, entonces deberá
+    registrarse como una firma digital fallida para el documento electrónico, motivada en:
+        •      Fecha de expedición del documento electrónico no corresponde con el lapso de vigencia del
+               certificado digital.
+
+    Este motivo puede ser concurrente con los descritos en la celda anterior.
+
+  Regla-3
+
+            Dirección de Gestión de Impuestos
+            Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+            Código postal 111711
+            www.dian.gov.co
+            Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                          Página 649 de 753
+                                                          Resolución No. 000165 (01/NOV/2023)
+
+Algoritmo de firma digital aplicado                           Certificado digital expedido después de 30 de septiembre de 2016 T23:59:59
+a la factura electrónica dentro del
+documento electrónico UBL
+
+/Invoice/ext:UBLExtensions/ext:UB Algoritmo=RSAwithSHA256
+LExtension[X]/ext:ExtensionConten Use: http:/www.w3.org/2001/04/xmldsig-more#rsa-sha256
+t/ds:Signature/ds:SignedInfo/ds:Si
+gnatureMethod/@Algorithm=          Algoritmo=RSAwithSHA384
+                                   Use: http:/www.w3.org/2001/04/xmldsig-more#rsa-sha384
+                                                              Algoritmo=RSAwithSHA512
+                                                              Use: http:/www.w3.org/2001/04/xmldsig-more#rsa-sha512
+Descripción:
+Estamos aplicando la reglamentación de la ONAC, URL
+http:/onac.org.co/anexos/documentos/TRANSICIRCULARES/2016circulares/circular03-2016.pdf
+El algoritmo de firma digital aplicado a la facture electrónica no tiene correspondencia directa con el resumen
+criptográfico utilizado para obtener los fragmentos de la Regla-4, i.e.
+
+    Si el valor del ../ds:SignatureMethod/@Algorithm no corresponde con los valores paramétricos, entonces
+    deberá registrarse como una firma digital fallida para el documento electrónico, motivada en:
+        •      Empleó un algoritmo de firma digital no previsto por la DIAN.
+
+    Si el valor del ../ds:SignatureMethod/@Algorithm corresponde a http:/www.w3.org/2000/09/xmldsig#rsa-
+    sha1, entonces deberá registrarse como una firma digital fallida para el documento electrónico, motivada en:
+        •      Empleó un algoritmo de firma digital que está caducado según el reglamento de la Ley de Comercio
+               Electrónico de Colombia.
+
+
+            Dirección de Gestión de Impuestos
+            Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+            Código postal 111711
+            www.dian.gov.co
+            Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                           Página 650 de 753
+                                                          Resolución No. 000165 (01/NOV/2023)
+
+
+  Regla-4
+Algoritmos de resumen criptográfico                                       Certificado digital expedido después de 30 de septiembre de 2016
+aplicado a los fragmentos de la factura                                   T23:59:59
+electrónica que se incluyen dentro del
+fragmento que se firma digitalmente
+
+/Invoice/ext:UBLExtensions/ext:UBLExten                                   SHA256. Cadena de 256 bits.
+sion[X]/ext:ExtensionContent/ds:Signatur                                  Use: http:/www.w3.org/2001/04/xmlenc#sha256
+e/ds:SignedInfo/ds:Reference/ds:DigestM
+ethod/@Algorithm=
+                                                                          SHA384. Cadena de 384 bits.
+/Invoice/ext:UBLExtensions/ext:UBLExten
+                                                                          Use:
+sion[X]/ext:ExtensionContent/ds:Signatur
+e/ds:SignedInfo/ds:Reference/ds:DigestM                                   http:/www.w3.org/2001/04/xmldsig-more#sha384
+ethod/@Algorithm=
+                                                                          SHA512. Cadena de 512 bits.
+/Invoice/ext:UBLExtensions/ext:UBLExten
+sion[X]/ext:ExtensionContent/ds:Signatur                                  Use:
+e/ds:SignedInfo/ds:Reference[3]/ds:Diges                                  http:/www.w3.org/2001/04/xmlenc#sha512
+tMethod/@Algorithm
+/Invoice/ext:UBLExtensions/ext:UBLExten
+sion[X]/ext:ExtensionContent/ds:Signatur
+e/ds:Object/xades:QualifyingProperties/x
+ades:SignedProperties/xades:SignedSigna
+tureProperties/xades:SigningCertificate/x
+ades:Cert/xades:CertDigest/ds:DigestMet
+hod/@Algorithm=
+/de:Invoice/ext:UBLExtensions/ext:UBLEx
+tension/ext:ExtensionContent/ds:Signatu
+            Dirección de Gestión de Impuestos
+            Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+            Código postal 111711
+            www.dian.gov.co
+            Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                             Página 651 de 753
+                                                        Resolución No. 000165 (01/NOV/2023)
+
+Algoritmos de resumen criptográfico                                     Certificado digital expedido después de 30 de septiembre de 2016
+aplicado a los fragmentos de la factura                                 T23:59:59
+electrónica que se incluyen dentro del
+fragmento que se firma digitalmente
+re/ds:Object/xades:QualifyingProperties/
+xades:SignedProperties/xades:SignedSign
+atureProperties/xades:SigningCertificate/
+xades:Cert/xades:CertDigest/ds:DigestMe
+thod/@Algorithm=
+/Invoice/ext:UBLExtensions/ext:UBLExten
+sion/ext:ExtensionContent/ds:Signature/
+ds:Object/xades:QualifyingProperties/xad
+es:SignedProperties/xades:SignedSignatu
+reProperties/xades:SigningCertificate/xad
+es:Cert[3]/xades:CertDigest/ds:DigestMet
+hod/@Algorithm=
+/Invoice/ext:UBLExtensions/ext:UBLExten
+sion[X]/ext:ExtensionContent/ds:Signatur
+e/ds:Object/xades:QualifyingProperties/x
+ades:SignedProperties/xades:SignedSigna
+tureProperties/xades:SignaturePolicyIden
+tifier/xades:SignaturePolicyId/xades:SigP
+olicyHash/ds:DigestMethod/@Algorithm=
+
+Descripción:
+Estamos aplicando la reglamentación de la ONAC, URL
+http:/onac.org.co/anexos/documentos/TRANSICIRCULARES/2016circulares/circular03-2016.pdf
+
+          Dirección de Gestión de Impuestos
+          Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+          Código postal 111711
+          www.dian.gov.co
+          Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                           Página 652 de 753
+                                                          Resolución No. 000165 (01/NOV/2023)
+
+Algoritmos de resumen criptográfico                                       Certificado digital expedido después de 30 de septiembre de 2016
+aplicado a los fragmentos de la factura                                   T23:59:59
+electrónica que se incluyen dentro del
+fragmento que se firma digitalmente
+
+El algoritmo de resumen criptográfico utilizado para los fragmentos que intervienen y forman parte del elemento
+que se firma digitalmente no tiene correspondencia con el algoritmo de firma digital de la Regla-3.
+    Si el valor del ../ds:DigestMethod/@Algorithm no corresponde con los valores paramétricos, entonces deberá
+    registrarse como una firma digital fallida para el documento electrónico, motivada en:
+        •      Empleó un algoritmo de resumen criptográfico no previsto por la DIAN. Vea Anexo 2.
+
+    Si el valor del ../ds:DigestMethod/@Algorithm corresponde a http:/www.w3.org/2000/09/xmldsig#sha1,
+    entonces deberá registrarse como una firma digital fallida para el documento electrónico, motivada en:
+        •      Empleó un algoritmo de resumen criptográfico que está caducado según el reglamento de la Ley de
+               Comercio Electrónico de Colombia.
+
+
+
+
+            Dirección de Gestión de Impuestos
+            Carrera 8 Nº 6C-38 piso 6º PBX 607 9999 – 382 4500 Ext. 905101
+            Código postal 111711
+            www.dian.gov.co
+            Formule su petición, queja, sugerencia o reclamo en el Sistema PQSR de la DIAN
+
+
+                                                                                                                                             Página 653 de 753
+
