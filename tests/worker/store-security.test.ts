@@ -8,6 +8,7 @@
 import { Hono } from 'hono';
 import userProfileRoutes from '../../cloudflare-migration/src/routes/user-profiles';
 import webhookRoutes from '../../cloudflare-migration/src/routes/webhooks';
+import telegramRoutes from '../../cloudflare-migration/src/routes/telegram';
 import { D1DatabaseFake } from './helpers/d1-sqlite';
 
 const SECRET = 'secreto_de_prueba';
@@ -163,5 +164,48 @@ describe('webhook de Wompi', () => {
     const res = await call('POST', '/wompi', { event: 'transaction.updated', data: { transaction: { id: 't5', status: 'APPROVED', payment_link_id: 'pl_1', amount_in_cents: 200000 }, payment_link: { sku: 'sale1' } } });
     expect(res.status).toBe(200);
     expect(db.sqlite.prepare(`SELECT status, payment_status FROM sales WHERE id = 'sale1'`).get()).toMatchObject({ status: 'pendiente', payment_status: 'pendiente' });
+  });
+});
+
+
+describe('aviso de posib al dueño de una tienda (Telegram)', () => {
+  let db: D1DatabaseFake;
+  const sent: { chat_id: string; text: string }[] = [];
+
+  const notice = async (body: unknown, secret?: string) => {
+    const app = new Hono();
+    app.route('/api/telegram', telegramRoutes);
+    const res = await app.request('/api/telegram/store-notice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(secret ? { 'X-Cron-Secret': secret } : {}) },
+      body: JSON.stringify(body),
+    }, { DB: db, CRON_SECRET: 'cron', TELEGRAM_BOT_TOKEN: 'bot' });
+    return res.status;
+  };
+
+  beforeEach(() => {
+    sent.length = 0;
+    global.fetch = jest.fn(async (_u: string | URL | Request, init?: RequestInit) => {
+      sent.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as typeof fetch;
+    db = new D1DatabaseFake();
+    addColumns(db);
+    db.insert('user_profiles', { id: 's1', clerk_user_id: 'c', email: 'x@y.co', role: 'admin', store_slug: 'la10', telegram_chat_id: '777', telegram_enabled: 1 });
+  });
+
+  it('sin el secreto interno no envía nada', async () => {
+    expect(await notice({ store_slug: 'la10', message: 'hola' })).toBe(401);
+    expect(await notice({ store_slug: 'la10', message: 'hola' }, 'otro')).toBe(401);
+    expect(sent).toHaveLength(0);
+  });
+
+  it('envía el mensaje solo al chat del dueño de la tienda', async () => {
+    expect(await notice({ store_slug: 'la10', message: 'Activa el domicilio' }, 'cron')).toBe(200);
+    expect(sent).toEqual([expect.objectContaining({ chat_id: '777', text: 'Activa el domicilio' })]);
+  });
+
+  it('si la tienda no tiene Telegram responde 404', async () => {
+    expect(await notice({ store_slug: 'no-existe', message: 'x' }, 'cron')).toBe(404);
   });
 });

@@ -538,4 +538,30 @@ app.post('/daily-summary', async (c) => {
   }
 });
 
+/**
+ * POST /api/telegram/store-notice - Aviso de posib al DUEÑO de una tienda (no a
+ * sus destinatarios adicionales), p. ej. "activa el domicilio". Ruta interna:
+ * exige X-Cron-Secret = CRON_SECRET (obligatorio). Body: { store_slug, message }
+ * con el mensaje en HTML de Telegram.
+ */
+app.post('/store-notice', async (c) => {
+  if (!c.env.CRON_SECRET || c.req.header('X-Cron-Secret') !== c.env.CRON_SECRET) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ store_slug?: string; message?: string }>().catch(() => ({}) as { store_slug?: string; message?: string });
+  if (!body.store_slug || !body.message?.trim()) {
+    return c.json({ success: false, error: 'store_slug y message son obligatorios' }, 400);
+  }
+  const owner = await c.env.DB.prepare(
+    'SELECT telegram_chat_id, telegram_enabled FROM user_profiles WHERE store_slug = ?'
+  )
+    .bind(body.store_slug)
+    .first<{ telegram_chat_id: string | null; telegram_enabled: number | null }>();
+  if (!owner?.telegram_chat_id || !owner.telegram_enabled) {
+    return c.json({ success: false, error: 'La tienda no tiene Telegram conectado' }, 404);
+  }
+  const result = await sendTelegramMessage(owner.telegram_chat_id, body.message, c.env.TELEGRAM_BOT_TOKEN);
+  return c.json({ success: result.success, ...(result.success ? {} : { error: result.error }) }, result.success ? 200 : 502);
+});
+
 export default app;
