@@ -765,17 +765,6 @@ app.get('/shipping-zones/:slug', async (c) => {
   }
 });
 
-// POST /api/storefront/wompi/create-payment-link/:slug
-// DESACTIVADA (410): tomaba el monto del navegador sin compararlo con el total
-// del pedido y el webhook de Wompi lo daba por pagado. La tienda cobra por
-// Nequi con referencia; Wompi en la tienda quedó descartado (2026-11-04).
-app.post('/wompi/create-payment-link/:slug', (c) =>
-  c.json<APIResponse>(
-    { success: false, error: 'El pago con Wompi desde la tienda no está disponible. Paga por Nequi.' },
-    410
-  )
-);
-
 // POST /api/storefront/auth/register/:slug - Registrar usuario en tienda
 app.post('/auth/register/:slug', async (c) => {
   const slug = c.req.param('slug');

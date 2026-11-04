@@ -1,17 +1,13 @@
 /**
  * Tienda online y pagos (2026-11-04):
  * - No se puede encender la tienda sin número de Nequi (PUT /api/user-profiles/:id).
- * - El webhook de Wompi ya no publica su secreto ni cree en el aviso: consulta la
- *   transacción en la API de Wompi antes de activar planes, y los links de pago
- *   de la tienda (descartados) no marcan pedidos como pagados.
+ * - Wompi se quitó por completo (publicaba su secreto en /api/webhooks/wompi/config).
+ * - Aviso interno de posib al dueño de una tienda por Telegram.
  */
 import { Hono } from 'hono';
 import userProfileRoutes from '../../cloudflare-migration/src/routes/user-profiles';
-import webhookRoutes from '../../cloudflare-migration/src/routes/webhooks';
 import telegramRoutes from '../../cloudflare-migration/src/routes/telegram';
 import { D1DatabaseFake } from './helpers/d1-sqlite';
-
-const SECRET = 'secreto_de_prueba';
 
 function addColumns(db: D1DatabaseFake) {
   for (const col of [
@@ -85,88 +81,17 @@ describe('encender la tienda exige número de Nequi', () => {
   });
 });
 
-describe('webhook de Wompi', () => {
-  let db: D1DatabaseFake;
-  let wompiApi: Record<string, unknown> | null;
-
-  const call = async (method: string, path: string, body?: unknown, env: Record<string, unknown> = { WOMPI_EVENTS_SECRET: SECRET }) => {
-    const app = new Hono();
-    app.route('/api/webhooks', webhookRoutes);
-    const res = await app.request(`/api/webhooks${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': SECRET },
-      body: body ? JSON.stringify(body) : undefined,
-    }, { DB: db, ...env });
-    return { status: res.status, text: await res.text() };
-  };
-
-  const event = (transaction: Record<string, unknown>) => ({ event: 'transaction.updated', data: { transaction } });
-  const profile = () =>
-    db.sqlite.prepare(`SELECT subscription_status, has_store_addon FROM user_profiles WHERE id = 'abcd1234-tienda'`).get();
-
-  beforeEach(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    wompiApi = null;
-    global.fetch = jest.fn(async (url: string | URL | Request) => {
-      if (String(url).includes('production.wompi.co/v1/transactions/')) {
-        return wompiApi
-          ? new Response(JSON.stringify({ data: wompiApi }), { status: 200 })
-          : new Response('{"error":"NOT_FOUND"}', { status: 404 });
-      }
-      return new Response('{}', { status: 200 }); // reenvío a neurai.dev
-    }) as typeof fetch;
-
-    db = new D1DatabaseFake();
-    addColumns(db);
-    db.insert('user_profiles', { id: 'abcd1234-tienda', clerk_user_id: 'c1', email: 't@b.co', role: 'admin', subscription_status: 'trial' });
-  });
-
-  it('ya no existe la página que mostraba el secreto', async () => {
-    const res = await call('GET', '/wompi/config');
-    expect(res.status).toBe(404);
-    expect(res.text).not.toContain('prod_events_');
-  });
-
-  it('sin el secreto configurado no acepta avisos (no hay secreto escrito en el código)', async () => {
-    const res = await call('POST', '/wompi', event({ id: 't1', status: 'APPROVED', reference: 'SUB-abcd1234-1', amount_in_cents: 2490000 }), {});
-    expect(res.status).toBe(401);
-    expect(profile()).toMatchObject({ subscription_status: 'trial' });
-  });
-
-  it('un aviso falso de "APPROVED" no activa el plan si Wompi no conoce la transacción', async () => {
-    const res = await call('POST', '/wompi', event({ id: 'falso', status: 'APPROVED', reference: 'SUB-abcd1234-1', amount_in_cents: 2490000 }));
-    expect(res.status).toBe(404);
-    expect(profile()).toMatchObject({ subscription_status: 'trial' });
-  });
-
-  it('se usa el estado que da Wompi, no el del aviso', async () => {
-    wompiApi = { id: 't2', status: 'DECLINED', reference: 'SUB-abcd1234-1', amount_in_cents: 2490000 };
-    await call('POST', '/wompi', event({ id: 't2', status: 'APPROVED', reference: 'SUB-abcd1234-1', amount_in_cents: 2490000 }));
-    expect(profile()).toMatchObject({ subscription_status: 'trial' });
-  });
-
-  it('un pago real aprobado por el valor del plan sí lo activa', async () => {
-    wompiApi = { id: 't3', status: 'APPROVED', reference: 'SUB-abcd1234-1', amount_in_cents: 2490000, payment_method_type: 'NEQUI' };
-    await call('POST', '/wompi', event({ id: 't3' }));
-    expect(profile()).toMatchObject({ subscription_status: 'active' });
-  });
-
-  it('un pago aprobado por un monto que no es de ningún plan no activa la suscripción', async () => {
-    wompiApi = { id: 't4', status: 'APPROVED', reference: 'SUB-abcd1234-1', amount_in_cents: 150000 };
-    await call('POST', '/wompi', event({ id: 't4' }));
-    expect(profile()).toMatchObject({ subscription_status: 'trial' });
-  });
-
-  it('los links de pago de la tienda (descartados) no marcan pedidos como pagados', async () => {
-    db.insert('sales', { id: 'sale1', tenant_id: 'abcd1234-tienda', sale_number: 'WEB-1', cashier_id: 'abcd1234-tienda', total: 100000, payment_method: 'transferencia', status: 'pendiente', payment_status: 'pendiente' });
-    const res = await call('POST', '/wompi', { event: 'transaction.updated', data: { transaction: { id: 't5', status: 'APPROVED', payment_link_id: 'pl_1', amount_in_cents: 200000 }, payment_link: { sku: 'sale1' } } });
-    expect(res.status).toBe(200);
-    expect(db.sqlite.prepare(`SELECT status, payment_status FROM sales WHERE id = 'sale1'`).get()).toMatchObject({ status: 'pendiente', payment_status: 'pendiente' });
+describe('Wompi quitado del sistema', () => {
+  it('el Worker ya no tiene rutas de Wompi (ni la que publicaba el secreto)', () => {
+    const fs = jest.requireActual('fs') as typeof import('fs');
+    const path = jest.requireActual('path') as typeof import('path');
+    const src = path.join(__dirname, '../../cloudflare-migration/src');
+    expect(fs.existsSync(path.join(src, 'routes/webhooks.ts'))).toBe(false);
+    expect(fs.existsSync(path.join(src, 'routes/wompi.ts'))).toBe(false);
+    const index = fs.readFileSync(path.join(src, 'index.ts'), 'utf8');
+    expect(index).not.toMatch(/wompi/i);
   });
 });
-
 
 describe('aviso de posib al dueño de una tienda (Telegram)', () => {
   let db: D1DatabaseFake;

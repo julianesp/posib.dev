@@ -22,14 +22,12 @@ import userProfilesRoutes from './routes/user-profiles';
 import creditPaymentsRoutes from './routes/credit-payments';
 import offersRoutes from './routes/offers';
 import paymentTransactionsRoutes from './routes/payment-transactions';
-import webhooksRoutes from './routes/webhooks';
 import adminStatsRoutes from './routes/admin-stats';
 import storeHealthRoutes from './routes/store-health';
 import dianThresholdsRoutes, { runDianThresholdAlerts } from './routes/dian-thresholds';
 import partnershipRoutes from './routes/partnership';
 import storefrontRoutes from './routes/storefront';
 import shippingZonesRoutes from './routes/shipping-zones';
-import wompiRoutes from './routes/wompi';
 import epaycoStorefrontRoutes from './routes/epayco-storefront';
 import subscriptionsRoutes from './routes/subscriptions';
 import emailRoutes from './routes/email';
@@ -87,10 +85,6 @@ app.get('/', (c) => {
   });
 });
 
-// Webhooks (NO auth middleware - verifican su propio secret)
-app.route('/api/webhooks', webhooksRoutes);
-
-// Los /webhook de wompi.ts y subscriptions.ts no verifican la firma de Wompi: no exponerlos sin auth hasta implementarla.
 
 // Visitas al sitio público (NO auth - beacon anónimo desde el navegador)
 app.route('/api/visits', siteVisitsPublic);
@@ -318,8 +312,6 @@ app.get('/api/team-invitations/validate', async (c) => {
 // Apply authentication middleware to all API routes
 app.use('/api/*', authMiddleware);
 
-// Wompi routes (protected - requieren autenticación del tenant)
-app.route('/api/wompi', wompiRoutes);
 
 // Subscriptions routes (protected - requieren autenticación)
 app.route('/api/subscriptions', subscriptionsRoutes);

@@ -15,15 +15,6 @@ export interface Env {
   // Se usa para verificar la firma del token contra el JWKS de Clerk.
   CLERK_JWT_ISSUER?: string;
 
-  // Wompi credentials for SaaS subscriptions (Admin account)
-  ADMIN_WOMPI_PUBLIC_KEY?: string;
-  ADMIN_WOMPI_PRIVATE_KEY?: string;
-
-  // Wompi (webhooks de eventos y llaves de la cuenta admin)
-  WOMPI_EVENTS_SECRET?: string;
-  WOMPI_PUBLIC_KEY?: string;
-  WOMPI_PRIVATE_KEY?: string;
-
   // CRON secret for scheduled tasks
   CRON_SECRET?: string;
 

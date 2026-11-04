@@ -86,7 +86,7 @@ const ADDONS = [
   },
 ];
 
-export default function SubscriptionPageWompi() {
+export default function SubscriptionPage() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const { tenantReady } = useTenant();

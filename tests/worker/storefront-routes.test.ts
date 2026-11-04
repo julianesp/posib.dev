@@ -381,11 +381,13 @@ describe('tienda online pública', () => {
   });
 
   describe('pago con Wompi desde la tienda', () => {
-    // Descartado: tomaba el monto del navegador y el webhook lo daba por pagado.
-    it('está desactivado', async () => {
+    // Quitado del todo: tomaba el monto del navegador.
+    it('ya no existe la ruta', async () => {
       global.fetch = jest.fn() as typeof fetch;
-      const res = await post('/wompi/create-payment-link/barrio', { order_id: 'x', order_number: 'y', amount_in_cents: 200000 });
-      expect(res.status).toBe(410);
+      const app = new Hono();
+      app.route('/api/storefront', storefrontRoutes);
+      const res = await app.request('/api/storefront/wompi/create-payment-link/barrio', { method: 'POST' }, { DB: db });
+      expect(res.status).toBe(404);
       expect(global.fetch).not.toHaveBeenCalled();
     });
   });

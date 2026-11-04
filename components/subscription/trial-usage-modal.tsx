@@ -226,7 +226,7 @@ export function TrialUsageModal({
           {/* Garantía */}
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-900 font-medium text-center">
-              ✓ Pago seguro con Wompi • Cancela cuando quieras • Soporte incluido
+              ✓ Pago seguro con ePayco • Cancela cuando quieras • Soporte incluido
             </p>
           </div>
         </div>

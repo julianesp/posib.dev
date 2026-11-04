@@ -1,6 +1,8 @@
 /**
  * Payment Transactions API Routes
- * Transacciones de pago de suscripciones (Wompi)
+ * Transacciones de pago de suscripciones (hoy ePayco). La columna se sigue
+ * llamando wompi_transaction_id por historia (guarda el id de ePayco); ver la
+ * memoria "Columna legacy de payment_transactions".
  * NO usa tenant_id, está ligado a user_profile_id
  */
 

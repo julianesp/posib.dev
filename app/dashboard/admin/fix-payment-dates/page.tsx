@@ -77,7 +77,7 @@ export default function FixPaymentDatesPage() {
         <div>
           <h1 className="text-3xl font-bold">Corregir Fechas de Pago</h1>
           <p className="text-gray-500">
-            Actualiza las fechas basándose en transacciones reales de Wompi
+            Actualiza las fechas basándose en los pagos reales registrados (ePayco)
           </p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function FixPaymentDatesPage() {
               <div className="text-sm text-brand">
                 <p className="font-medium mb-1">¿Qué hace esta herramienta?</p>
                 <ul className="list-disc list-inside space-y-1 text-brand">
-                  <li>Busca todas las transacciones de pago aprobadas por Wompi</li>
+                  <li>Busca todas las transacciones de pago aprobadas (ePayco)</li>
                   <li>Identifica la fecha del último pago REAL</li>
                   <li>Actualiza last_payment_date con la fecha correcta</li>
                   <li>Calcula next_billing_date (+30 días desde el último pago)</li>

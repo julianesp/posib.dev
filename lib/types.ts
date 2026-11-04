@@ -68,7 +68,6 @@ export interface UserProfile {
   store_terms?: string; // Términos y condiciones
   store_shipping_enabled?: boolean; // Envío a domicilio habilitado
   store_pickup_enabled?: boolean; // Recogida en tienda habilitada
-  wompi_enabled?: boolean; // Pagos con Wompi habilitados
   store_min_order?: number; // Pedido mínimo
   store_nequi_number?: string; // Número de Nequi o cuenta bancaria
 
