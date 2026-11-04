@@ -21,6 +21,7 @@ const MIGRATIONS = [
   'migrations/025_web_order_payment_reference.sql',
   'migrations/027_product_siigo_fields.sql',
   'migrations/031_dian_e_invoicing.sql',
+  'migrations/032_partnership.sql',
 ];
 
 function toSqlValue(value: unknown): SQLInputValue {
@@ -34,6 +35,19 @@ function toSqlValue(value: unknown): SQLInputValue {
 // node:sqlite devuelve objetos sin prototipo; D1 devuelve objetos normales.
 const plain = <T>(row: unknown) => ({ ...(row as object) }) as T;
 
+// Los errores de node:sqlite nacen en otro "realm": en Jest `error instanceof
+// Error` da false, mientras que en el Worker los de D1 sí son Error. Se
+// re-lanzan como Error de este realm (mismo mensaje) para que código como
+// isUniqueViolation() se comporte igual que en producción.
+function d1Call<T>(fn: () => T): T {
+  try {
+    return fn();
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error((error as { message?: string })?.message ?? String(error));
+  }
+}
+
 class D1PreparedStatementFake {
   constructor(
     private readonly db: DatabaseSync,
@@ -46,13 +60,13 @@ class D1PreparedStatementFake {
   }
 
   async first<T = Record<string, unknown>>(column?: string): Promise<T | null> {
-    const row = this.db.prepare(this.sql).get(...this.params);
+    const row = d1Call(() => this.db.prepare(this.sql).get(...this.params));
     if (!row) return null;
     return column ? ((row as Record<string, unknown>)[column] as T) : plain<T>(row);
   }
 
   async all<T = Record<string, unknown>>() {
-    const rows = this.db.prepare(this.sql).all(...this.params);
+    const rows = d1Call(() => this.db.prepare(this.sql).all(...this.params));
     return { success: true, results: rows.map((r) => plain<T>(r)), meta: {} };
   }
 
@@ -61,6 +75,10 @@ class D1PreparedStatementFake {
   }
 
   runSync() {
+    return d1Call(() => this.runRaw());
+  }
+
+  private runRaw() {
     // En un batch, D1 devuelve las filas de las consultas de lectura.
     if (/^\s*(SELECT|WITH)\b/i.test(this.sql)) {
       const rows = this.db.prepare(this.sql).all(...this.params);

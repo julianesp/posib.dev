@@ -1034,6 +1034,26 @@ export async function setDianAlreadyInvoicing(alreadyInvoicing: boolean, getToke
   });
 }
 
+/** Negocio de varios socios (Configuración). Ver routes/partnership.ts del Worker. */
+export interface Partner {
+  name: string;
+  /** Porcentaje de participación (0-100); entre todos suman 100. */
+  share: number;
+}
+
+export interface Partnership {
+  enabled: boolean;
+  partners: Partner[];
+}
+
+export async function getPartnership(getToken: GetTokenFn): Promise<Partnership> {
+  return fetchAPI('/api/partnership', getToken);
+}
+
+export async function savePartnership(data: Partnership, getToken: GetTokenFn): Promise<Partnership> {
+  return fetchAPI('/api/partnership', getToken, { method: 'PUT', body: JSON.stringify(data) });
+}
+
 export async function getStoresHealth(
   getToken: GetTokenFn
 ): Promise<{ generatedAt: string; stores: StoreHealth[] }> {

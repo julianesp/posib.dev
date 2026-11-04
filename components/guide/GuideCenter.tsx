@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import {
   Dialog,
@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { GUIDES, findGuideForPath, type Guide } from "@/lib/guide/guides";
-import { isAutoHelpEnabled, setAutoHelpEnabled } from "@/lib/help-preferences";
+import { setAutoHelpEnabled } from "@/lib/help-preferences";
+import { useAutoHelpEnabled } from "@/components/help/AutoHelpToggle";
 import s from "./guide.module.css";
 
 /**
@@ -77,8 +78,8 @@ export function GuideCenter({
   pathname: string | null;
   onOpenGuide: (id: string) => void;
 }) {
-  // Inicialización lazy: en el cliente lee la preferencia real de localStorage.
-  const [autoHelp, setAutoHelp] = useState(() => isAutoHelpEnabled());
+  // Misma preferencia que el check "Ayudas gráficas" del panel de inicio.
+  const autoHelp = useAutoHelpEnabled();
   // Se recalcula cada vez que se abre (el diálogo solo se pinta en el cliente).
   const guides = useMemo(() => (open ? availableGuides() : GUIDES), [open]);
 
@@ -134,10 +135,7 @@ export function GuideCenter({
           </div>
           <Switch
             checked={autoHelp}
-            onCheckedChange={(checked) => {
-              setAutoHelp(checked);
-              setAutoHelpEnabled(checked);
-            }}
+            onCheckedChange={setAutoHelpEnabled}
             aria-label="Activar o desactivar los avisos de primera vez"
           />
         </div>

@@ -76,9 +76,10 @@ function parseRecommendations(text: string): ParsedRecommendations {
 }
 
 const MARGIN_COLORS: Record<string, string> = {
-  low: 'bg-yellow-100 text-yellow-800',
+  // Solo el color de la tienda: más fuerte cuanto mejor el margen.
+  low: 'bg-gray-100 text-gray-700',
   mid: 'bg-brand-light text-brand',
-  high: 'bg-green-100 text-green-800',
+  high: 'bg-brand text-white',
 };
 
 function marginColor(margin: string) {
@@ -129,18 +130,18 @@ export function ProductRecommendationsSection({
   const parsed = raw ? parseRecommendations(raw) : null;
 
   return (
-    <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+    <Card className="border-2 border-brand/20 bg-brand-light/60">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-green-600" />
-            <span className="text-green-900">Productos Tendencia en Colombia</span>
+            <TrendingUp className="h-6 w-6 text-brand" />
+            <span className="text-brand-hover">Productos Tendencia en Colombia</span>
           </div>
           <Button
             onClick={generateRecommendations}
             disabled={loading}
             size="sm"
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            className="bg-brand hover:bg-brand-hover"
           >
             {loading ? (
               <>
@@ -162,7 +163,7 @@ export function ProductRecommendationsSection({
           <div className="space-y-4">
             {/* Introducción */}
             {parsed.intro && (
-              <p className="text-sm text-gray-600 bg-white rounded-lg px-4 py-3 border border-green-100">
+              <p className="text-sm text-gray-600 bg-white rounded-lg px-4 py-3 border border-brand/20">
                 {parsed.intro}
               </p>
             )}
@@ -172,11 +173,11 @@ export function ProductRecommendationsSection({
               {parsed.products.map((product, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-xl border border-green-100 shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-xl border border-brand/20 shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow"
                 >
                   {/* Número + nombre */}
                   <div className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center mt-0.5">
                       {i + 1}
                     </span>
                     <div>
@@ -213,18 +214,18 @@ export function ProductRecommendationsSection({
 
             {/* Consejo final */}
             {parsed.tip && (
-              <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <Lightbulb className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex gap-3 bg-brand-light/60 border border-brand/20 rounded-xl p-4">
+                <Lightbulb className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs font-semibold text-amber-800 mb-1">Consejo de Promoción</p>
-                  <p className="text-sm text-amber-700">{parsed.tip}</p>
+                  <p className="text-xs font-semibold text-brand-hover mb-1">Consejo de Promoción</p>
+                  <p className="text-sm text-brand">{parsed.tip}</p>
                 </div>
               </div>
             )}
           </div>
         ) : (
           <div className="text-center py-8">
-            <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-green-300" />
+            <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-brand/40" />
             <p className="text-gray-600 mb-2">
               Descubre qué productos están en tendencia en Colombia
             </p>

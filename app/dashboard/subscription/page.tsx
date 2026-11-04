@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import {
   Check,
@@ -262,6 +262,38 @@ export default function SubscriptionPageWompi() {
   const planDaysLeft = daysUntil(profile?.next_billing_date);
   const planCanRenew =
     hasActiveSubscription && planDaysLeft !== null && planDaysLeft <= RENEWAL_WINDOW_DAYS;
+  // Acceso directo al pago (?pagar=plan): lo usan el correo de recordatorio y
+  // la fila "Mi plan" del Panel de control. Abre ePayco apenas carga el perfil.
+  const autoPayDone = useRef(false);
+  const planPayable = !!profile && (!hasActiveSubscription || planCanRenew);
+  useEffect(() => {
+    if (autoPayDone.current || !profile) return;
+    if (new URLSearchParams(window.location.search).get("pagar") !== "plan") return;
+    // La marca y la limpieza de la URL van al disparar (no antes): en desarrollo
+    // React monta el efecto dos veces y el primer intervalo se cancela.
+    const finish = () => {
+      autoPayDone.current = true;
+      window.history.replaceState(null, "", window.location.pathname);
+    };
+    if (!planPayable) {
+      finish();
+      toast.info("Tu plan está al día. Podrás pagar el siguiente mes desde 7 días antes de que venza.");
+      return;
+    }
+    // El script de ePayco (app/layout.tsx) puede tardar un poco en cargar.
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      const ready = !!(window as unknown as EpaycoWindow).ePayco;
+      if (ready || ++tries >= 20) {
+        window.clearInterval(timer);
+        finish();
+        handleSubscribe("plan-abarrotes-monthly");
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, planPayable]);
+
   const storeAddonDaysLeft = daysUntil(profile?.store_addon_expires_at);
   const storeAddonExpired =
     !!profile?.has_store_addon && storeAddonDaysLeft !== null && storeAddonDaysLeft <= 0;

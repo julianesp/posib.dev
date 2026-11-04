@@ -14,6 +14,7 @@ import {
   ShippingZonePublic,
   submitPaymentReference,
 } from "@/lib/storefront-api";
+import { allowedDeliveryMethods } from "@/lib/storefront-delivery";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import {
@@ -126,16 +127,11 @@ export default function CheckoutPage() {
       setConfig(configData);
       setShippingZones(zonesData);
 
-      // Establecer método de entrega por defecto según configuración
-      if (
-        configData.store_pickup_enabled &&
-        !configData.store_shipping_enabled
-      ) {
+      // Método de entrega por defecto: el único que ofrezca la tienda.
+      const delivery = allowedDeliveryMethods(configData);
+      if (!delivery.shipping) {
         setDeliveryMethod("pickup");
-      } else if (
-        !configData.store_pickup_enabled &&
-        configData.store_shipping_enabled
-      ) {
+      } else if (!delivery.pickup) {
         setDeliveryMethod("shipping");
       }
 
@@ -283,6 +279,8 @@ export default function CheckoutPage() {
   // ¿Están todos los datos obligatorios listos para confirmar el pedido?
   // Mientras esto sea false, el botón "Confirmar Pedido" queda deshabilitado
   // (gris); cuando se completa todo, se habilita (azul).
+  // Solo se ofrecen las formas de entrega que la tienda tiene activas.
+  const deliveryOptions = allowedDeliveryMethods(config ?? {});
   const meetsMinOrder = !(
     config?.store_min_order &&
     config.store_min_order > 0 &&
@@ -860,6 +858,7 @@ export default function CheckoutPage() {
                       setDeliveryMethod(value as "pickup" | "shipping")
                     }
                   >
+                    {deliveryOptions.pickup && (
                     <div className="flex items-center space-x-3 p-4 border rounded-lg">
                       <RadioGroupItem value="pickup" id="pickup" />
                       <Label htmlFor="pickup" className="flex-1 cursor-pointer">
@@ -879,7 +878,9 @@ export default function CheckoutPage() {
                         </div>
                       </Label>
                     </div>
+                    )}
 
+                    {deliveryOptions.shipping && (
                     <div className="flex items-center space-x-3 p-4 border rounded-lg">
                       <RadioGroupItem value="shipping" id="shipping" />
                       <Label
@@ -897,6 +898,7 @@ export default function CheckoutPage() {
                         </div>
                       </Label>
                     </div>
+                    )}
                   </RadioGroup>
 
                   {deliveryMethod === "shipping" && (

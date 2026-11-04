@@ -24,7 +24,7 @@ import {
 import { getUserProfileByClerkId } from "@/lib/cloudflare-subscription-helpers";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
 import { getDebtorCustomers } from "@/lib/cloudflare-credit-helpers";
-import { Customer } from "@/lib/types";
+import { Customer, UserProfile } from "@/lib/types";
 import { useTenant } from "@/lib/tenant-context";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -43,6 +43,8 @@ import { differenceInDays } from "date-fns";
 import Link from "next/link";
 import { PageGlossary } from "@/components/dashboard/page-glossary";
 import { DianThresholdsCard } from "@/components/dashboard/dian-thresholds-card";
+import { AutoHelpToggle } from "@/components/help/AutoHelpToggle";
+import { PlanPaymentRow } from "@/components/subscription/plan-payment-row";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -73,6 +75,8 @@ export default function DashboardPage() {
   const [debtors, setDebtors] = useState<Customer[]>([]);
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Perfil del dueño (para la fila "Mi plan"); null si quien entra es del equipo.
+  const [ownerProfile, setOwnerProfile] = useState<{ profile: UserProfile; loadedAt: number } | null>(null);
 
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
@@ -82,6 +86,12 @@ export default function DashboardPage() {
           const profile = await getUserProfileByClerkId(getToken);
           const isSuper = profile?.is_superadmin || false;
           setIsSuperAdmin(isSuper);
+          if (
+            profile &&
+            (profile.clerk_user_id === user.id || profile.clerk_user_id_test === user.id)
+          ) {
+            setOwnerProfile({ profile, loadedAt: Date.now() });
+          }
 
           if (isSuper) {
             // Fetch SaaS metrics for super admin
@@ -425,8 +435,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Sin título: el menú lateral ya indica en qué sección se está */}
-      {metrics.totalProducts === 0 && (
-        <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {/* Avisos de primera vez de la guía de uso (misma preferencia que en la guía) */}
+        <AutoHelpToggle />
+        {metrics.totalProducts === 0 && (
           <Button
             onClick={handleSeedProducts}
             disabled={seeding}
@@ -437,8 +449,8 @@ export default function DashboardPage() {
             <Database className="h-4 w-4" />
             {seeding ? "Creando..." : "Crear Productos Demo"}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Accesos rápidos — acciones que el tendero hace a diario */}
       <div data-guide="dash-shortcuts" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -475,6 +487,11 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* Hasta cuándo está pagado el plan, con acceso directo al pago (solo el dueño) */}
+      {ownerProfile && (
+        <PlanPaymentRow profile={ownerProfile.profile} now={ownerProfile.loadedAt} />
+      )}
 
       {/* Ventas del año frente al tope de facturación electrónica de la DIAN */}
       <DianThresholdsCard />

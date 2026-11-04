@@ -17,6 +17,8 @@ export interface AdvancedMetrics {
 
   // Métricas de clientes
   total_customers: number;
+  /** Clientes registrados que compraron en el período (ventas con cliente). */
+  buying_customers: number;
   new_customers: number;
   returning_customers: number;
   average_order_value: number;
@@ -222,8 +224,9 @@ export async function calculateAdvancedMetrics(
       roi_percentage: roiPercentage,
 
       total_customers: customers.length,
+      buying_customers: uniqueCustomerIds.size,
       new_customers: newCustomers,
-      returning_customers: uniqueCustomerIds.size - newCustomers,
+      returning_customers: Math.max(uniqueCustomerIds.size - newCustomers, 0),
       average_order_value: averageOrderValue,
       customer_lifetime_value: customerLifetimeValue,
       customer_acquisition_cost: customerAcquisitionCost,

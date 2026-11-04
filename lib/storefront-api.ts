@@ -232,11 +232,6 @@ export async function submitPaymentReference(
   return data.data as { payment_reference: string };
 }
 
-export interface EPaycoSessionResponse {
-  session_id: string;
-  checkout_url?: string;
-}
-
 export async function createOrder(slug: string, orderData: CreateOrderData): Promise<OrderResponse> {
   const url = `${WORKER_URL}/api/storefront/orders/${slug}`;
 
@@ -273,44 +268,5 @@ export interface ShippingZonePublic {
 
 export async function getStoreShippingZones(slug: string): Promise<ShippingZonePublic[]> {
   return fetchStorefrontAPI<ShippingZonePublic[]>(`/api/storefront/shipping-zones/${slug}`);
-}
-
-/**
- * Create ePayco checkout session for an order (public endpoint)
- */
-export async function createEPaycoSession(
-  slug: string,
-  orderData: {
-    order_id: string;
-    order_number: string;
-    amount: number;
-    customer_email?: string;
-    customer_name?: string;
-    customer_phone?: string;
-    redirect_url?: string;
-  }
-): Promise<EPaycoSessionResponse> {
-  const url = `${WORKER_URL}/api/storefront/epayco/create-session/${slug}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(orderData),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Error ${response.status}`);
-  }
-
-  const data: APIResponse<EPaycoSessionResponse> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to create ePayco session');
-  }
-
-  return data.data as EPaycoSessionResponse;
 }
 

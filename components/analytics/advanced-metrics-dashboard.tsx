@@ -37,9 +37,16 @@ import {
   type TemporalComparison,
   type ProactiveAlert,
 } from '@/lib/advanced-analytics-helpers';
+import { formatCurrency } from "@/lib/utils";
+import { BRAND, BRAND_LIGHT, BRAND_CHART_COLORS } from "@/lib/brand-chart-colors";
 import { PageGlossary } from "@/components/dashboard/page-glossary";
 
-const COLORS = ['#2563eb', '#059669', '#f59e0b', '#dc2626', '#8b5cf6'];
+// Tonos del color de la tienda (no colores fijos): ver lib/brand-chart-colors.ts
+const COLORS = BRAND_CHART_COLORS;
+
+// Eje de las gráficas: "$4,6 M" en vez de cortar "4614600".
+const compactCOP = (value: number) =>
+  `$${new Intl.NumberFormat('es-CO', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
 
 interface MetricCardProps {
   title: string;
@@ -74,7 +81,7 @@ function MetricCard({ title, value, change, icon, format = 'number' }: MetricCar
         {change !== undefined && (
           <p
             className={`text-xs flex items-center gap-1 mt-1 ${
-              change >= 0 ? 'text-green-600' : 'text-red-600'
+              change >= 0 ? 'text-brand' : 'text-brand-hover'
             }`}
           >
             {change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -171,18 +178,18 @@ export default function AdvancedMetricsDashboard() {
               key={alert.id}
               className={`border-l-4 ${
                 alert.severity === 'critical'
-                  ? 'border-l-red-500'
+                  ? 'border-l-brand-hover'
                   : alert.severity === 'warning'
-                  ? 'border-l-yellow-500'
-                  : 'border-l-blue-500'
+                  ? 'border-l-brand'
+                  : 'border-l-brand/40'
               }`}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   {alert.severity === 'critical' ? (
-                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <AlertTriangle className="h-5 w-5 text-brand-hover" />
                   ) : alert.severity === 'warning' ? (
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    <AlertTriangle className="h-5 w-5 text-brand" />
                   ) : (
                     <Info className="h-5 w-5 text-brand" />
                   )}
@@ -222,13 +229,13 @@ export default function AdvancedMetricsDashboard() {
           format="percentage"
         />
         <MetricCard
-          title="Valor Promedio de Orden"
+          title="Compra promedio"
           value={metrics.average_order_value}
           icon={<ShoppingCart className="h-4 w-4 text-muted-foreground" />}
           format="currency"
         />
         <MetricCard
-          title="Lifetime Value (LTV)"
+          title="Lo que compra cada cliente"
           value={metrics.customer_lifetime_value}
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
           format="currency"
@@ -248,9 +255,9 @@ export default function AdvancedMetricsDashboard() {
               <BarChart data={profitData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis />
+                <YAxis width={64} tickFormatter={compactCOP} />
                 <Tooltip formatter={(value) => `$${Number(value).toLocaleString('es-CO')}`} />
-                <Bar dataKey="value" fill="#2563eb">
+                <Bar dataKey="value" fill={BRAND}>
                   {profitData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -271,58 +278,79 @@ export default function AdvancedMetricsDashboard() {
               <LineChart data={temporalData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis />
+                <YAxis width={64} tickFormatter={compactCOP} />
                 <Tooltip formatter={(value) => `$${Number(value).toLocaleString('es-CO')}`} />
                 <Legend />
-                <Line type="monotone" dataKey="Ingresos" stroke="#2563eb" strokeWidth={2} />
-                <Line type="monotone" dataKey="Ganancia" stroke="#059669" strokeWidth={2} />
+                <Line type="monotone" dataKey="Ingresos" stroke={BRAND} strokeWidth={2.5} />
+                <Line type="monotone" dataKey="Ganancia" stroke={BRAND_LIGHT} strokeWidth={2.5} strokeDasharray="6 4" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Métricas de Clientes */}
+      {/* Clientes: en frases sencillas, sin siglas (antes LTV / CAC) */}
       <Card>
         <CardHeader>
-          <CardTitle>Métricas de Clientes</CardTitle>
-          <CardDescription>Análisis del comportamiento de clientes</CardDescription>
+          <CardTitle>Tus clientes</CardTitle>
+          <CardDescription>
+            Solo cuenta las ventas en las que elegiste un cliente. Las ventas de mostrador sin
+            cliente no entran aquí.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Total de Clientes</p>
-              <p className="text-2xl font-bold">{metrics.total_customers}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Clientes Nuevos</p>
-              <p className="text-2xl font-bold text-green-600">{metrics.new_customers}</p>
-              <p className="text-xs text-muted-foreground">
-                {comparison.growth.customers_percentage.toFixed(1)}% vs anterior
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="font-num text-3xl font-bold text-gray-900">{metrics.buying_customers}</p>
+              <p className="mt-1 text-sm text-gray-600">
+                clientes te compraron en este período (tienes {metrics.total_customers} registrados)
               </p>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Clientes Recurrentes</p>
-              <p className="text-2xl font-bold text-brand">{metrics.returning_customers}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Costo de Adquisición (CAC)</p>
-              <p className="text-2xl font-bold">
-                ${metrics.customer_acquisition_cost.toLocaleString('es-CO')}
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="font-num text-3xl font-bold text-brand">{metrics.new_customers}</p>
+              <p className="mt-1 text-sm text-gray-600">
+                clientes nuevos
+                {comparison.growth.customers_percentage !== 0 && (
+                  <>
+                    {" "}({comparison.growth.customers_percentage > 0 ? "+" : ""}
+                    {comparison.growth.customers_percentage.toFixed(0)} % frente al período anterior)
+                  </>
+                )}
               </p>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">LTV / CAC Ratio</p>
-              <p className="text-2xl font-bold">
-                {(metrics.customer_lifetime_value / metrics.customer_acquisition_cost || 0).toFixed(2)}x
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {metrics.customer_lifetime_value / metrics.customer_acquisition_cost >= 3
-                  ? 'Excelente'
-                  : 'Mejorar marketing'}
-              </p>
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="font-num text-3xl font-bold text-brand">{metrics.returning_customers}</p>
+              <p className="mt-1 text-sm text-gray-600">clientes que volvieron a comprar</p>
             </div>
           </div>
+
+          {metrics.buying_customers > 0 && (
+            <ul className="space-y-2 text-sm text-gray-800">
+              <li>
+                Cada cliente te compró en promedio{" "}
+                <strong className="font-num">{formatCurrency(metrics.customer_lifetime_value)}</strong> en este período.
+              </li>
+              <li>
+                Cada compra deja en promedio{" "}
+                <strong className="font-num">{formatCurrency(metrics.average_order_value)}</strong>.
+              </li>
+              <li>
+                {(() => {
+                  const ofTen = Math.round((metrics.returning_customers / metrics.buying_customers) * 10);
+                  return (
+                    <>
+                      <strong>{ofTen} de cada 10</strong> clientes volvieron.{" "}
+                      {ofTen >= 6
+                        ? "Muy bien: tu clientela es fiel."
+                        : ofTen >= 3
+                          ? "Vas bien. Un trato amable, los puntos y las ofertas ayudan a que vuelvan más."
+                          : "Pocos vuelven. Prueba con puntos, ofertas o recordándoles por WhatsApp."}
+                    </>
+                  );
+                })()}
+              </li>
+            </ul>
+          )}
         </CardContent>
       </Card>
 
@@ -340,7 +368,7 @@ export default function AdvancedMetricsDashboard() {
                 <p className="text-sm text-muted-foreground">Producto estrella</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-brand">
                   {metrics.best_profit_margin_product.margin_percentage.toFixed(1)}%
                 </p>
                 <p className="text-sm text-muted-foreground">Margen de ganancia</p>
@@ -363,16 +391,12 @@ export default function AdvancedMetricsDashboard() {
             meaning: "Lo que ganas por cada $100 invertidos en mercancía.",
           },
           {
-            term: "LTV",
-            meaning: "Lo que te compra cada cliente, en promedio.",
+            term: "Compra promedio",
+            meaning: "Lo que deja, en promedio, cada venta.",
           },
           {
-            term: "CAC",
-            meaning: "Costo aproximado de conseguir un cliente (estimado, no exacto).",
-          },
-          {
-            term: "LTV / CAC",
-            meaning: "De 3 en adelante es muy bueno.",
+            term: "Lo que compra cada cliente",
+            meaning: "Lo que te compró cada cliente registrado en el período, en promedio.",
           },
           {
             term: "Clientes recurrentes",

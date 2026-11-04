@@ -325,6 +325,16 @@ html[data-theme] {
   transform: translateY(1px);
 }
 
+/* Fondo de los modales: velo suave y SIN desenfoque, para que el menú lateral
+   y el encabezado se sigan leyendo detrás (antes era negro casi sólido:
+   bg-opacity-* no existe en Tailwind v4). Todos los modales usan esta clase. */
+.modal-backdrop {
+  background-color: rgb(28 25 23 / 0.45);
+}
+html[data-theme="dark"] .modal-backdrop {
+  background-color: rgb(0 0 0 / 0.55);
+}
+
 /* Cifras de dinero grandes (tarjetas, totales): estilo caja registradora. */
 .app-shell .font-num {
   font-family: var(--font-bricolage), var(--font-instrument-sans), sans-serif;

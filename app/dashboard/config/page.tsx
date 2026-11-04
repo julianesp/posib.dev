@@ -37,6 +37,7 @@ import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { PaymentQrConfig } from "@/components/config/payment-qr-config";
 import { TelegramConfig } from "@/components/config/telegram-config";
 import { DebtRemindersConfig } from "@/components/config/debt-reminders-config";
+import { PartnershipConfig } from "@/components/config/partnership-config";
 import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup-config";
 import { AccentConfig } from "@/components/config/accent-config";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
@@ -302,6 +303,9 @@ export default function ConfigPage() {
 
       {/* Recordatorios de fiado (clientes por correo; aviso al tendero siempre) */}
       <DebtRemindersConfig />
+
+      {/* Negocio de varios socios: reparto de la ganancia en Rentabilidad */}
+      <PartnershipConfig />
 
       {/* Copia de seguridad de ventas a Google Drive */}
       <div id="google-drive" data-guide="config-backup">

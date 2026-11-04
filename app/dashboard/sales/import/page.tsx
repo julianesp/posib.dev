@@ -166,8 +166,12 @@ export default function ImportSalesPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/dashboard/sales">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer border-2 border-brand/60 font-semibold text-gray-800 hover:border-brand hover:bg-brand-light"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1 text-brand" />
             Volver
           </Button>
         </Link>

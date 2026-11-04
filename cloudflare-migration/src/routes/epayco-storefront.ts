@@ -4,167 +4,21 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, APIResponse, AppEnv } from '../types';
-import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
+import type { APIResponse, AppEnv } from '../types';
 
 const app = new Hono<AppEnv>();
 
 // POST /api/storefront/epayco/create-session/:slug
-// Crea una sesión de checkout de ePayco usando las credenciales del comerciante
-app.post('/create-session/:slug', async (c) => {
-  const slug = c.req.param('slug');
-
-  try {
-    const body = await c.req.json();
-    const { order_id, order_number, amount, currency = 'COP', customer_email, customer_name, customer_phone, description } = body;
-
-    if (!order_id || !order_number || !amount) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Faltan campos requeridos: order_id, order_number, amount',
-      }, 400);
-    }
-
-    // Obtener credenciales ePayco del comerciante por slug (validando suscripción/addon)
-    const store = await findActiveStore<
-      StoreAccessRow & {
-        store_name?: string;
-        epayco_public_key?: string;
-        epayco_private_key?: string;
-        epayco_customer_id?: string;
-        epayco_enabled: number;
-      }
-    >(
-      c.env.DB,
-      slug,
-      'store_name, epayco_public_key, epayco_private_key, epayco_customer_id, epayco_enabled'
-    );
-
-    if (!store) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Tienda no encontrada o deshabilitada',
-      }, 404);
-    }
-
-    if (!store.epayco_enabled) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Pagos con ePayco no habilitados para esta tienda',
-      }, 400);
-    }
-
-    if (!store.epayco_public_key || !store.epayco_private_key || !store.epayco_customer_id) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Credenciales de ePayco no configuradas',
-      }, 400);
-    }
-
-    // Autenticarse con ePayco Apify
-    const loginResponse = await fetch('https://apify.epayco.co/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        apiKey: store.epayco_public_key,
-        privateKey: store.epayco_private_key,
-      }),
-    });
-
-    if (!loginResponse.ok) {
-      const errorText = await loginResponse.text().catch(() => '');
-      console.error('ePayco login error:', loginResponse.status, errorText);
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Error al autenticarse con ePayco',
-      }, 502);
-    }
-
-    const loginData = await loginResponse.json() as any;
-    const apifyToken = loginData?.token || loginData?.bearer_token;
-
-    if (!apifyToken) {
-      console.error('ePayco login response missing token:', JSON.stringify(loginData));
-      return c.json<APIResponse>({
-        success: false,
-        error: 'No se obtuvo token de ePayco',
-      }, 502);
-    }
-
-    // Construir URL de confirmación
-    const confirmationUrl = `https://posib.dev/store/${slug}/payment-confirmation`;
-
-    // Crear sesión de checkout en ePayco
-    const sessionResponse = await fetch('https://apify.epayco.co/payment/session/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apifyToken}`,
-      },
-      body: JSON.stringify({
-        p_cust_id_cliente: store.epayco_customer_id,
-        p_key: store.epayco_public_key,
-        p_amount: String(amount),
-        p_currency_code: currency,
-        p_description: description || `Pedido ${order_number}${customer_name ? ` - ${customer_name}` : ''}`,
-        p_extra1: order_id,
-        p_extra2: order_number,
-        p_extra3: slug,
-        p_email_billing: customer_email || '',
-        p_name_billing: customer_name || '',
-        p_phone_billing: customer_phone || '',
-        p_url_response: confirmationUrl,
-        p_url_confirmation: confirmationUrl,
-        p_ref_payco: order_number,
-      }),
-    });
-
-    if (!sessionResponse.ok) {
-      const errorText = await sessionResponse.text().catch(() => '');
-      console.error('ePayco session error:', sessionResponse.status, errorText);
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Error al crear sesión de pago en ePayco',
-      }, 502);
-    }
-
-    const sessionData = await sessionResponse.json() as any;
-    const sessionId = sessionData?.sessionId || sessionData?.data?.sessionId || sessionData?.id;
-
-    if (!sessionId) {
-      console.error('ePayco session response missing sessionId:', JSON.stringify(sessionData));
-      return c.json<APIResponse>({
-        success: false,
-        error: 'No se obtuvo sessionId de ePayco',
-      }, 502);
-    }
-
-    // Guardar referencia de la sesión en las notas del pedido
-    await c.env.DB.prepare(
-      `UPDATE sales
-       SET notes = COALESCE(notes, '') || '\nePayco Session ID: ' || ?
-       WHERE id = ? AND tenant_id = ?`
-    )
-      .bind(sessionId, order_id, store.id)
-      .run();
-
-    return c.json<APIResponse>({
-      success: true,
-      data: {
-        session_id: sessionId,
-      },
-    });
-
-  } catch (error: any) {
-    console.error('Error creating ePayco session:', error);
-    return c.json<APIResponse>({
-      success: false,
-      error: error.message || 'Error al crear sesión de pago',
-    }, 500);
-  }
-});
+// DESACTIVADA (410): el monto lo mandaba el navegador y no se comparaba con el total
+// del pedido (se podía pagar menos de lo pedido). Ninguna pantalla la usaba; la
+// tienda cobra por Nequi con referencia. Si se reactiva, el monto debe salir de
+// `sales.total` del pedido, nunca del body.
+app.post('/create-session/:slug', (c) =>
+  c.json<APIResponse>(
+    { success: false, error: 'El pago con ePayco desde la tienda no está disponible. Paga por Nequi.' },
+    410
+  )
+);
 
 // GET /api/storefront/epayco/transaction/:refPayco
 // Consulta el estado de una transacción ePayco por ref_payco

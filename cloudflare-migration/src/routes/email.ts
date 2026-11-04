@@ -30,9 +30,10 @@ app.post('/subscription-reminders', async (c) => {
   const db = c.env.DB;
 
   try {
-    // Obtener usuarios con suscripción activa o en trial que vence en los
-    // próximos 7 días. Solo mientras aún no ha vencido (> 0): si la fecha ya
-    // pasó y el estado sigue en trial/active, no enviar "vence en -N días".
+    // UN solo correo por período, 3 días antes de que venza el trial o el plan
+    // (antes salía cada día desde 7 días antes y cansaba al tendero). El cron
+    // corre una vez al día, así que la ventana (2, 3] días coincide con una sola
+    // corrida. En la app el aviso y el botón de pago siguen en el Panel de control.
     const users = await db
       .prepare(
         `SELECT id, clerk_user_id, email, full_name, subscription_status,
@@ -41,9 +42,11 @@ app.post('/subscription-reminders', async (c) => {
          WHERE subscription_status IN ('trial', 'active')
            AND (
              (subscription_status = 'trial'
-               AND julianday(trial_end_date) - julianday('now') BETWEEN 0.0001 AND 7)
+               AND julianday(trial_end_date) - julianday('now') > 2
+               AND julianday(trial_end_date) - julianday('now') <= 3)
              OR (subscription_status = 'active'
-               AND julianday(next_billing_date) - julianday('now') BETWEEN 0.0001 AND 7)
+               AND julianday(next_billing_date) - julianday('now') > 2
+               AND julianday(next_billing_date) - julianday('now') <= 3)
            )`
       )
       .all();
@@ -76,7 +79,9 @@ app.post('/subscription-reminders', async (c) => {
         days_left: daysLeft,
         next_billing_date: expirationDate,
         plan_price: 24900,
-        payment_link: `https://posib.dev/dashboard/subscription`,
+        is_trial: user.subscription_status === 'trial',
+        // Abre ePayco directo (ver app/dashboard/subscription/page.tsx, ?pagar=plan).
+        payment_link: `https://posib.dev/dashboard/subscription?pagar=plan`,
       };
 
       const html = subscriptionReminderTemplate(emailData);

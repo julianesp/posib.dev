@@ -17,6 +17,8 @@ import {
   Trash2,
   Upload,
   FileBarChart,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,6 +63,7 @@ function SalesContent() {
   const { user } = useUser();
 
   const [sales, setSales] = useState<SaleWithRelations[]>([]);
+  const [customerQuery, setCustomerQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(() => {
     const fromUrl = searchParams.get("filter");
@@ -176,7 +179,21 @@ function SalesContent() {
     }
   };
 
-  const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
+  // Buscador por cliente (nombre, cédula/NIT, teléfono o correo) o número de
+  // venta: p. ej. cuando un cliente vuelve a pedir su factura.
+  const normalize = (text: string) =>
+    text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const query = normalize(customerQuery);
+  const visibleSales = query
+    ? sales.filter((sale) => {
+        const c = sale.customer;
+        const web = !c && sale.sale_number.startsWith("WEB-") ? sale.notes || "" : "";
+        return [sale.sale_number, c?.name, c?.id_number, c?.phone, c?.email, web]
+          .some((field) => field && normalize(field).includes(query));
+      })
+    : sales;
+
+  const totalSales = visibleSales.reduce((sum, sale) => sum + sale.total, 0);
 
   // Función para extraer información del cliente desde las notas (para ventas web)
   const extractCustomerInfoFromNotes = (notes: string) => {
@@ -347,10 +364,10 @@ function SalesContent() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedSales.size === sales.length) {
+    if (selectedSales.size === visibleSales.length) {
       setSelectedSales(new Set());
     } else {
-      setSelectedSales(new Set(sales.map(s => s.id)));
+      setSelectedSales(new Set(visibleSales.map(s => s.id)));
     }
   };
 
@@ -627,6 +644,17 @@ function SalesContent() {
       <Card data-guide="sales-filters">
         <CardContent className="pt-6">
           <div className="space-y-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="search"
+                value={customerQuery}
+                onChange={(e) => setCustomerQuery(e.target.value)}
+                placeholder="Buscar cliente: nombre, cédula/NIT, teléfono o número de venta"
+                aria-label="Buscar ventas por cliente"
+                className="pl-9"
+              />
+            </div>
             <div className="flex flex-wrap gap-2">
               {["all", "today", "week", "month"].map((f) => (
                 <Button
@@ -709,7 +737,7 @@ function SalesContent() {
       <div data-guide="sales-summary" className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <Card>
           <CardContent className="pt-4 md:pt-6">
-            <div className="text-xl md:text-2xl font-bold">{sales.length}</div>
+            <div className="text-xl md:text-2xl font-bold">{visibleSales.length}</div>
             <p className="text-xs text-gray-500">Total Ventas</p>
           </CardContent>
         </Card>
@@ -724,8 +752,8 @@ function SalesContent() {
         <Card>
           <CardContent className="pt-4 md:pt-6">
             <div className="text-xl md:text-2xl font-bold">
-              {sales.length > 0
-                ? formatCurrency(totalSales / sales.length)
+              {visibleSales.length > 0
+                ? formatCurrency(totalSales / visibleSales.length)
                 : "$0"}
             </div>
             <p className="text-xs text-gray-500">Promedio por Venta</p>
@@ -743,11 +771,21 @@ function SalesContent() {
               <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-gray-500">No hay ventas en este período</p>
             </div>
+          ) : visibleSales.length === 0 ? (
+            <div className="text-center py-8">
+              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-gray-500">
+                Ninguna venta de este período coincide con &quot;{customerQuery}&quot;.
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Prueba con otra parte del nombre o elige &quot;Todas&quot; arriba.
+              </p>
+            </div>
           ) : (
             <>
               {/* Botones de eliminación masiva - Sticky */}
               {selectedSales.size > 0 && (
-                <div className="sticky top-0 z-10 bg-brand-light/50 border border-brand/40 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+                <div className="sticky -top-4 z-20 bg-brand-light border border-brand/40 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
                   <div className="text-sm font-medium text-brand">
                     {selectedSales.size} venta(s) seleccionada(s)
                   </div>
@@ -787,14 +825,16 @@ function SalesContent() {
               )} */}
 
               {/* Vista de tabla para desktop */}
-              <div className="hidden lg:block overflow-x-auto">
+              {/* overflow-x-clip (no auto): un contenedor con scroll propio anularía
+                  el encabezado fijo, que se pega al tope del <main> al bajar */}
+              <div className="hidden lg:block overflow-x-clip">
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky -top-4 z-10 bg-brand-light text-sm font-semibold text-gray-800 shadow-[inset_0_-2px_0_var(--color-brand)]">
                     <tr className="border-b">
                       <th className="text-center py-3 px-4 w-12">
                         <input
                           type="checkbox"
-                          checked={selectedSales.size === sales.length && sales.length > 0}
+                          checked={selectedSales.size === visibleSales.length && visibleSales.length > 0}
                           onChange={toggleSelectAll}
                           className="w-4 h-4 cursor-pointer"
                           title="Seleccionar todas"
@@ -812,7 +852,7 @@ function SalesContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sales.map((sale) => (
+                    {visibleSales.map((sale) => (
                       <tr key={sale.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4 text-center">
                           <input
@@ -959,7 +999,7 @@ function SalesContent() {
 
               {/* Vista de cards para móvil y tablet */}
               <div className="lg:hidden space-y-3">
-                {sales.map((sale) => (
+                {visibleSales.map((sale) => (
                   <Card key={sale.id}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
@@ -1127,25 +1167,27 @@ function SalesContent() {
 
       {/* Modal de detalle de venta */}
       {showDetailModal && selectedSale && (
-        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto ">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+        <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold">Detalle de Venta</h2>
                 <p className="text-sm text-gray-500">
                   {selectedSale.sale_number}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                type="button"
                 onClick={() => {
                   setShowDetailModal(false);
                   setSelectedSale(null);
                 }}
+                aria-label="Cerrar detalle de venta"
+                title="Cerrar"
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100 text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-200 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
-                ✕
-              </Button>
+                <X className="h-6 w-6" strokeWidth={2.5} />
+              </button>
             </div>
 
             <div className="p-6 space-y-4">
@@ -1327,8 +1369,7 @@ function SalesContent() {
                       </span>
                     </div>
                   )}
-                  {selectedSale.points_earned &&
-                    selectedSale.points_earned > 0 && (
+                  {(selectedSale.points_earned ?? 0) > 0 && (
                       <div className="flex justify-between text-sm text-brand">
                         <span>Puntos ganados:</span>
                         <span className="font-semibold">

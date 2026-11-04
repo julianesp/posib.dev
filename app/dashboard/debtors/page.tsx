@@ -361,9 +361,11 @@ export default function DebtorsPage() {
           ) : (
             <>
               {/* Vista de tabla para desktop */}
-              <div className="hidden md:block overflow-x-auto">
+              {/* overflow-x-clip (no auto): un contenedor con scroll propio anularía
+                  el encabezado fijo, que se pega al tope del <main> al bajar */}
+              <div className="hidden md:block overflow-x-clip">
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky -top-4 z-10 bg-brand-light text-sm font-semibold text-gray-800 shadow-[inset_0_-2px_0_var(--color-brand)]">
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">Nombre</th>
                       <th className="text-left py-3 px-4">Contacto</th>

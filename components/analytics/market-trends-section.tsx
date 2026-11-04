@@ -40,7 +40,7 @@ function TrendingList({
           key={product.product_name}
           className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
         >
-          <div className="flex items-center justify-center w-7 h-7 bg-indigo-600 text-white rounded-full font-bold text-xs shrink-0">
+          <div className="flex items-center justify-center w-7 h-7 bg-brand text-white rounded-full font-bold text-xs shrink-0">
             {index + 1}
           </div>
           <div className="flex-1 min-w-0">
@@ -57,7 +57,7 @@ function TrendingList({
               </span>
             </div>
             {product.avg_sale_price > 0 && (
-              <p className="text-xs font-medium text-green-700">
+              <p className="text-xs font-medium text-brand">
                 ~{formatCurrency(product.avg_sale_price)}
               </p>
             )}
@@ -95,7 +95,7 @@ export function MarketTrendsSection() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Globe className="h-5 w-5 text-indigo-600" />
+            <Globe className="h-5 w-5 text-brand" />
             Tendencias del Mercado
           </h2>
           <p className="text-sm text-gray-500">
@@ -118,9 +118,9 @@ export function MarketTrendsSection() {
       </div>
 
       {!data && !loading && (
-        <Card className="border-dashed border-2 border-indigo-200 bg-indigo-50">
+        <Card className="border-dashed border-2 border-brand/20 bg-brand-light/60">
           <CardContent className="py-10 text-center">
-            <Globe className="h-14 w-14 mx-auto mb-3 text-indigo-300" />
+            <Globe className="h-14 w-14 mx-auto mb-3 text-brand/40" />
             <p className="text-gray-600 mb-1 font-medium">Descubre qué venden otras tiendas</p>
             <p className="text-sm text-gray-500">
               Ve los productos más populares en tu ciudad y en todo el país para tomar mejores decisiones de compra.
@@ -171,12 +171,12 @@ export function MarketTrendsSection() {
           */}
 
           {/* Tendencias nacionales */}
-          <Card className="border-indigo-200">
+          <Card className="border-brand/20">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Globe className="h-4 w-4 text-indigo-600" />
+                <Globe className="h-4 w-4 text-brand" />
                 Top Nacional
-                <Badge variant="secondary" className="text-indigo-700 bg-indigo-100">
+                <Badge variant="secondary" className="text-brand bg-brand-light/60">
                   Colombia
                 </Badge>
               </CardTitle>

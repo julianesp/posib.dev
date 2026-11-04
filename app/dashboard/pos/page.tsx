@@ -1795,7 +1795,7 @@ export default function POSPage() {
   // Modal cuando NO hay productos en el sistema (no solo sin stock)
   if (!hasAnyProducts) {
     return (
-      <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-2xl">
           <div className="mb-6">
             <div className="mx-auto w-20 h-20 bg-brand-light rounded-full flex items-center justify-center mb-4">
@@ -1864,7 +1864,7 @@ export default function POSPage() {
     <div className="space-y-4 md:space-y-6">
       {/* Modal del escáner de cámara */}
       {showCameraScanner && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-2xl">
             <BarcodeScannerZXing
               onDetected={handleCameraScan}
@@ -1876,7 +1876,7 @@ export default function POSPage() {
 
       {/* Modal de registro rápido de producto no encontrado */}
       {showQuickRegister && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -3107,7 +3107,7 @@ export default function POSPage() {
       {/* Modal de cobro con QR (Nequi/Daviplata/transferencia) */}
       {showQrModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4"
           onClick={() => setShowQrModal(false)}
         >
           <div

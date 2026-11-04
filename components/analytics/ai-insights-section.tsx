@@ -124,18 +124,18 @@ export function AIInsightsSection({ salesData, customerData, daysAnalyzed }: AII
   };
 
   return (
-    <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+    <Card className="border-2 border-brand/20 bg-brand-light/60">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-purple-600" />
-            <span className="text-purple-900">Diagnóstico Inteligente</span>
+            <Brain className="h-6 w-6 text-brand" />
+            <span className="text-brand-hover">Diagnóstico Inteligente</span>
           </div>
           <Button
             onClick={generateInsights}
             disabled={loading}
             size="sm"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="bg-brand hover:bg-brand-hover"
           >
             {loading ? (
               <>
@@ -153,12 +153,12 @@ export function AIInsightsSection({ salesData, customerData, daysAnalyzed }: AII
       </CardHeader>
       <CardContent>
         {error ? (
-          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+          <div className="bg-brand-light border-2 border-brand/50 rounded-lg p-6">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+              <AlertTriangle className="h-6 w-6 text-brand-hover flex-shrink-0 mt-1" />
               <div className="flex-1">
-                <h3 className="font-semibold text-red-900 mb-2">Error al generar insights</h3>
-                <p className="text-red-700 text-sm mb-4">{error}</p>
+                <h3 className="font-semibold text-brand-hover mb-2">Error al generar insights</h3>
+                <p className="text-brand-hover text-sm mb-4">{error}</p>
                 {error.includes('API Key') && (
                   <div className="bg-white rounded-md p-4 text-sm">
                     <p className="font-semibold text-gray-900 mb-2">📝 Cómo solucionar:</p>
@@ -174,7 +174,7 @@ export function AIInsightsSection({ salesData, customerData, daysAnalyzed }: AII
                   onClick={generateInsights}
                   disabled={loading}
                   size="sm"
-                  className="mt-4 bg-red-600 hover:bg-red-700"
+                  className="mt-4 bg-brand-hover hover:bg-brand-hover"
                 >
                   Intentar nuevamente
                 </Button>
@@ -225,7 +225,7 @@ export function AIInsightsSection({ salesData, customerData, daysAnalyzed }: AII
           </div>
         ) : (
           <div className="text-center py-8">
-            <Brain className="h-16 w-16 mx-auto mb-4 text-purple-300" />
+            <Brain className="h-16 w-16 mx-auto mb-4 text-brand/40" />
             <p className="text-gray-600 mb-4">
               Haz clic en "Generar Diagnóstico" para obtener un análisis completo de tu negocio
             </p>

@@ -199,67 +199,67 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
     <div className="space-y-6">
       {/* Overview Cards - Métricas clave explicadas simplemente */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-brand/40 bg-brand-light/50">
+        <Card className="border-brand bg-brand">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <Users className="h-8 w-8 text-brand" />
+              <Users className="h-8 w-8 text-white/80" />
               <div className="text-right">
-                <p className="text-3xl font-bold text-brand">{totalCustomers}</p>
-                <p className="text-xs text-brand">últimos {daysAnalyzed} días</p>
+                <p className="text-3xl font-bold text-white">{totalCustomers}</p>
+                <p className="text-xs text-white/80">últimos {daysAnalyzed} días</p>
               </div>
             </div>
-            <p className="text-sm font-semibold text-brand">Total de Clientes</p>
-            <p className="text-xs text-brand mt-1">Personas que te compraron</p>
+            <p className="text-sm font-semibold text-white">Total de Clientes</p>
+            <p className="text-xs text-white/80 mt-1">Personas que te compraron</p>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-brand/30 bg-brand-light">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <UserPlus className="h-8 w-8 text-green-600" />
+              <UserPlus className="h-8 w-8 text-brand" />
               <div className="text-right">
-                <p className="text-3xl font-bold text-green-900">{newCustomers}</p>
-                <p className="text-xs text-green-700">
+                <p className="text-3xl font-bold text-brand-hover">{newCustomers}</p>
+                <p className="text-xs text-brand">
                   {totalCustomers > 0 ? ((newCustomers / totalCustomers) * 100).toFixed(0) : 0}% del total
                 </p>
               </div>
             </div>
-            <p className="text-sm font-semibold text-green-900">Clientes Nuevos</p>
-            <p className="text-xs text-green-700 mt-1">Primera compra en este período</p>
+            <p className="text-sm font-semibold text-brand-hover">Clientes Nuevos</p>
+            <p className="text-xs text-brand mt-1">Primera compra en este período</p>
           </CardContent>
         </Card>
 
-        <Card className="border-purple-200 bg-purple-50">
+        <Card className="border-brand bg-brand">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <Repeat className="h-8 w-8 text-purple-600" />
+              <Repeat className="h-8 w-8 text-white/80" />
               <div className="text-right">
-                <p className="text-3xl font-bold text-purple-900">{returningCustomers}</p>
-                <p className="text-xs text-purple-700">{retentionRate.toFixed(0)}% retención</p>
+                <p className="text-3xl font-bold text-white">{returningCustomers}</p>
+                <p className="text-xs text-white/80">{retentionRate.toFixed(0)}% retención</p>
               </div>
             </div>
-            <p className="text-sm font-semibold text-purple-900">Clientes que Regresan</p>
-            <p className="text-xs text-purple-700 mt-1">Compraron más de una vez</p>
+            <p className="text-sm font-semibold text-white">Clientes que Regresan</p>
+            <p className="text-xs text-white/80 mt-1">Compraron más de una vez</p>
           </CardContent>
         </Card>
 
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-brand/30 bg-brand-light">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <DollarSign className="h-8 w-8 text-orange-600" />
+              <DollarSign className="h-8 w-8 text-brand" />
               <div className="text-right">
-                <p className="text-2xl font-bold text-orange-900">{formatCurrency(avgTicket)}</p>
-                <p className="text-xs text-orange-700">{avgFrequency.toFixed(1)} compras/cliente</p>
+                <p className="text-2xl font-bold text-brand-hover">{formatCurrency(avgTicket)}</p>
+                <p className="text-xs text-brand">{avgFrequency.toFixed(1)} compras/cliente</p>
               </div>
             </div>
-            <p className="text-sm font-semibold text-orange-900">Ticket Promedio</p>
-            <p className="text-xs text-orange-700 mt-1">Cuánto gasta cada cliente</p>
+            <p className="text-sm font-semibold text-brand-hover">Ticket Promedio</p>
+            <p className="text-xs text-brand mt-1">Cuánto gasta cada cliente</p>
           </CardContent>
         </Card>
       </div>
 
       {/* ¿Qué está pasando? - Insight Card */}
-      <Card className={`border-2 border-${businessHealth.color}-300 bg-${businessHealth.color}-50`}>
+      <Card className="border-2 border-brand/30 bg-brand-light/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Lightbulb className="h-5 w-5" />
@@ -271,7 +271,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
             <p className="font-semibold text-lg mb-2">{businessHealth.message}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div className="flex items-start gap-2">
-                <Trophy className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <Trophy className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">
                     {champions.length} Clientes Champions ({championsPercentage.toFixed(0)}%)
@@ -280,7 +280,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-brand-hover flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">
                     {atRisk.length} Clientes en Riesgo ({atRiskPercentage.toFixed(0)}%)
@@ -289,7 +289,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <Heart className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                <Heart className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">{retentionRate.toFixed(0)}% de Retención</p>
                   <p className="text-gray-600">
@@ -299,7 +299,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <TrendingUp className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">{avgFrequency.toFixed(1)} Compras por Cliente</p>
                   <p className="text-gray-600">
@@ -324,7 +324,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
           <div className="space-y-2 text-sm">
             {champions.length > 0 && (
               <div className="flex items-start gap-2 bg-white rounded p-3 border border-brand/40">
-                <Gift className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <Gift className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Cuida a tus {champions.length} Champions</p>
                   <p className="text-gray-600">
@@ -334,10 +334,10 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
               </div>
             )}
             {atRisk.length > 0 && (
-              <div className="flex items-start gap-2 bg-white rounded p-3 border border-red-200">
-                <PhoneCall className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 bg-white rounded p-3 border border-brand/50">
+                <PhoneCall className="h-5 w-5 text-brand-hover flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-red-700">URGENTE: Recupera a {atRisk.length} clientes en riesgo</p>
+                  <p className="font-semibold text-brand-hover">URGENTE: Recupera a {atRisk.length} clientes en riesgo</p>
                   <p className="text-gray-600">
                     Envíales un mensaje o llama: "Te extrañamos, tenemos {' '}
                     una oferta especial para ti"
@@ -346,8 +346,8 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
               </div>
             )}
             {newCustomers > 0 && (
-              <div className="flex items-start gap-2 bg-white rounded p-3 border border-green-200">
-                <MessageCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 bg-white rounded p-3 border border-brand/20">
+                <MessageCircle className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Dale bienvenida a {newCustomers} clientes nuevos</p>
                   <p className="text-gray-600">
@@ -357,8 +357,8 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
               </div>
             )}
             {retentionRate < 40 && (
-              <div className="flex items-start gap-2 bg-white rounded p-3 border border-orange-200">
-                <Mail className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 bg-white rounded p-3 border border-brand/20">
+                <Mail className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Mejora tu retención (actualmente {retentionRate.toFixed(0)}%)</p>
                   <p className="text-gray-600">
@@ -383,16 +383,23 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(segments)
               .sort((a, b) => b[1] - a[1]) // Ordenar por cantidad
-              .map(([segment, count]) => {
+              .map(([segment, count], i) => {
                 const info = getSegmentInfo(segment);
+                // Solo el color de la tienda: una tarjeta fuerte, la siguiente clara.
+                const dark = i % 2 === 0;
                 return (
-                  <div key={segment} className={`bg-${info.color}-50 rounded-lg p-4 border border-${info.color}-200`}>
+                  <div
+                    key={segment}
+                    className={`rounded-lg p-4 border ${
+                      dark ? "bg-brand border-brand text-white" : "bg-brand-light border-brand/30"
+                    }`}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">{info.icon}</span>
-                      <span className={`text-3xl font-bold text-${info.color}-900`}>{count}</span>
+                      <span className={`text-3xl font-bold ${dark ? "text-white" : "text-brand-hover"}`}>{count}</span>
                     </div>
                     <p className="font-semibold text-sm mb-1">{segment}</p>
-                    <p className="text-xs text-gray-700 mb-2">{info.explanation}</p>
+                    <p className={`text-xs mb-2 ${dark ? "text-white/85" : "text-gray-700"}`}>{info.explanation}</p>
                     <div className="bg-white rounded p-2 mt-2 border border-gray-200">
                       <p className="text-xs font-semibold text-gray-900">{info.action}</p>
                     </div>
@@ -405,15 +412,15 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
 
       {/* Champions - Tus Estrellas */}
       {champions.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
+        <Card className="border-brand/20 bg-brand-light/60">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-900">
+            <CardTitle className="flex items-center gap-2 text-brand-hover">
               <Trophy className="h-5 w-5" />
               🏆 Tus Clientes CHAMPIONS - ¡Las Estrellas de tu Negocio!
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-white rounded-lg p-3 mb-4 border border-yellow-200">
+            <div className="bg-white rounded-lg p-3 mb-4 border border-brand/20">
               <p className="text-sm font-semibold text-gray-900 mb-1">¿Qué significa esto?</p>
               <p className="text-sm text-gray-700">
                 Estos {champions.length} clientes son tu tesoro: compran seguido, gastan mucho y compraron hace poco.{' '}
@@ -423,16 +430,16 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
             </div>
             <div className="space-y-3">
               {champions.slice(0, 5).map((customer) => (
-                <div key={customer.customer_id} className="bg-white p-4 rounded-lg border border-yellow-200">
+                <div key={customer.customer_id} className="bg-white p-4 rounded-lg border border-brand/20">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-semibold text-lg flex items-center gap-2">
-                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                        <Star className="h-4 w-4 text-brand fill-brand" />
                         {customer.customer_name}
                       </p>
                       <p className="text-sm text-gray-600">{customer.segment_description}</p>
                     </div>
-                    <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <span className="bg-brand text-white px-3 py-1 rounded-full text-xs font-semibold">
                       {customer.rfm_score}
                     </span>
                   </div>
@@ -447,11 +454,11 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
                     </div>
                     <div>
                       <span className="text-gray-500">Ha gastado:</span>
-                      <p className="font-bold text-green-600">{formatCurrency(customer.monetary)}</p>
+                      <p className="font-bold text-brand">{formatCurrency(customer.monetary)}</p>
                     </div>
                   </div>
                   <div className="flex gap-2 text-xs">
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">💚 Cliente Valioso</span>
+                    <span className="bg-brand-light/60 text-brand-hover px-2 py-1 rounded">💚 Cliente Valioso</span>
                     <span className="bg-brand-light text-brand px-2 py-1 rounded">⚡ Compra Frecuente</span>
                   </div>
                 </div>
@@ -463,16 +470,16 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
 
       {/* At Risk - ¡Alerta! */}
       {atRisk.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-brand/50 bg-brand-light">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-900">
+            <CardTitle className="flex items-center gap-2 text-brand-hover">
               <AlertTriangle className="h-5 w-5" />
               ⚠️ Clientes en RIESGO - ¡Acción URGENTE Necesaria!
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-white rounded-lg p-3 mb-4 border border-red-300">
-              <p className="text-sm font-semibold text-red-900 mb-1">⚠️ ¡IMPORTANTE!</p>
+            <div className="bg-white rounded-lg p-3 mb-4 border border-brand/50">
+              <p className="text-sm font-semibold text-brand-hover mb-1">⚠️ ¡IMPORTANTE!</p>
               <p className="text-sm text-gray-700">
                 Estos {atRisk.length} clientes eran BUENOS (gastaban bien), pero hace tiempo no compran.{' '}
                 <strong>Pueden irse con la competencia.</strong> ¡Contáctalos HOY! Una llamada, un mensaje, una oferta
@@ -481,22 +488,22 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
             </div>
             <div className="space-y-3">
               {atRisk.slice(0, 5).map((customer) => (
-                <div key={customer.customer_id} className="bg-white p-4 rounded-lg border border-red-200">
+                <div key={customer.customer_id} className="bg-white p-4 rounded-lg border border-brand/50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-semibold">{customer.customer_name}</p>
-                      <p className="text-sm text-red-600 font-medium">
+                      <p className="text-sm text-brand-hover font-medium">
                         ⏰ Sin comprar {customer.recency_days} días - ¡Contáctalo YA!
                       </p>
                     </div>
-                    <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <span className="bg-brand-hover text-white px-3 py-1 rounded-full text-xs font-semibold">
                       URGENTE
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-sm mb-3">
                     <div>
                       <span className="text-gray-500">Sin comprar:</span>
-                      <p className="font-semibold text-red-600">{customer.recency_days} días</p>
+                      <p className="font-semibold text-brand-hover">{customer.recency_days} días</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Compraba:</span>
@@ -504,10 +511,10 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
                     </div>
                     <div>
                       <span className="text-gray-500">Gastó antes:</span>
-                      <p className="font-bold text-green-600">{formatCurrency(customer.monetary)}</p>
+                      <p className="font-bold text-brand">{formatCurrency(customer.monetary)}</p>
                     </div>
                   </div>
-                  <div className="bg-red-100 rounded p-2 text-xs text-red-900">
+                  <div className="bg-brand-light rounded p-2 text-xs text-brand-hover">
                     <p className="font-semibold">💡 Qué hacer:</p>
                     <p>
                       1) Llámalo o envía WhatsApp 2) Pregunta cómo está 3) Ofrece descuento especial "te extrañamos"
@@ -521,7 +528,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
       )}
 
       {/* Explicación Simple RFM */}
-      <Card className="bg-gradient-to-r from-brand-light/50 to-purple-50 border-brand/40">
+      <Card className="bg-brand-light/50 border-brand/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-brand">
             <Sparkles className="h-5 w-5" />
@@ -549,7 +556,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
             </div>
             <div className="bg-white rounded-lg p-3 border border-gray-200">
               <div className="flex items-center gap-2 mb-2">
-                <Repeat className="h-4 w-4 text-purple-600" />
+                <Repeat className="h-4 w-4 text-brand" />
                 <p className="font-semibold">Frequency (Frecuencia)</p>
               </div>
               <p className="text-xs text-gray-700">
@@ -558,7 +565,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
             </div>
             <div className="bg-white rounded-lg p-3 border border-gray-200">
               <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
+                <DollarSign className="h-4 w-4 text-brand" />
                 <p className="font-semibold">Monetary (Dinero)</p>
               </div>
               <p className="text-xs text-gray-700">
@@ -566,9 +573,9 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
               </p>
             </div>
           </div>
-          <div className="bg-yellow-100 rounded-lg p-3 border border-yellow-300">
-            <p className="font-semibold text-yellow-900 mb-1">💡 El Score RFM</p>
-            <p className="text-xs text-yellow-900">
+          <div className="bg-brand-light/60 rounded-lg p-3 border border-brand/30">
+            <p className="font-semibold text-brand-hover mb-1">💡 El Score RFM</p>
+            <p className="text-xs text-brand-hover">
               Cada cliente recibe un puntaje de 3 números (ej: "555"). Cuanto más alto, mejor. "555" = Cliente
               perfecto. "111" = Cliente que casi no compra.
             </p>

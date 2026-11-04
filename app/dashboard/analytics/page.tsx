@@ -175,10 +175,10 @@ export default function AnalyticsPage() {
 
     return (
       <div className="flex items-center justify-center min-h-[70vh]">
-        <Card className="max-w-2xl w-full border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+        <Card className="max-w-2xl w-full border-2 border-brand/20 bg-brand-light/60">
           <CardContent className="pt-8 pb-8 text-center">
             <div className="mb-6">
-              <div className="mx-auto w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mb-4">
+              <div className="mx-auto w-20 h-20 bg-brand rounded-full flex items-center justify-center mb-4">
                 <Lock className="h-10 w-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -191,8 +191,8 @@ export default function AnalyticsPage() {
             </div>
             c
             {isTrial ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-yellow-800">
+              <div className="bg-brand-light/60 border border-brand/20 rounded-lg p-4 mb-6">
+                <p className="text-brand-hover">
                   <strong>¡Hola!</strong> Estás en período de prueba pero parece
                   que hubo un problema verificando tu acceso. Por favor recarga
                   la página o contacta a soporte.
@@ -202,34 +202,34 @@ export default function AnalyticsPage() {
               <>
                 <div className="bg-white rounded-lg p-6 mb-6 text-left">
                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    <Sparkles className="h-5 w-5 text-brand" />
                     ¿Qué incluye el Análisis IA?
                   </h3>
                   <ul className="space-y-2 text-gray-700">
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
                       <span>
                         Análisis inteligente de ventas y predicciones precisas
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
                       <span>
                         Predicciones de inventario para evitar agotamientos
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
                       <span>
                         Recomendaciones automáticas de pedidos optimizados
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
                       <span>Reportes avanzados exportables a Excel</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
                       <span>
                         Identificación de productos críticos en tiempo real
                       </span>
@@ -238,7 +238,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-2xl font-bold text-purple-600 mb-2">
+                  <p className="text-2xl font-bold text-brand mb-2">
                     Incluido en el Plan Premium
                   </p>
                   <p className="text-sm text-gray-500">
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
                 <Link href="/dashboard/subscription">
                   <Button
                     size="lg"
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8"
+                    className="bg-brand hover:bg-brand-hover text-white px-8"
                   >
                     <Sparkles className="mr-2 h-5 w-5" />
                     {isActive
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Brain className="h-8 w-8 text-purple-600" />
+            <Brain className="h-8 w-8 text-brand" />
             Análisis Inteligente con IA
           </h1>
           <p className="text-gray-500 text-sm md:text-base">
@@ -353,11 +353,11 @@ export default function AnalyticsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500">Productos Críticos</p>
-                    <p className="text-2xl font-bold text-red-600">
+                    <p className="text-2xl font-bold text-brand-hover">
                       {criticalProducts.length}
                     </p>
                   </div>
-                  <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
+                  <AlertTriangle className="h-8 w-8 text-brand-hover opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -369,11 +369,11 @@ export default function AnalyticsPage() {
                     <p className="text-sm text-gray-500">
                       Productos en Advertencia
                     </p>
-                    <p className="text-2xl font-bold text-yellow-600">
+                    <p className="text-2xl font-bold text-brand">
                       {warningProducts.length}
                     </p>
                   </div>
-                  <AlertTriangle className="h-8 w-8 text-yellow-600 opacity-50" />
+                  <AlertTriangle className="h-8 w-8 text-brand opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -397,7 +397,7 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+                <TrendingUp className="h-5 w-5 text-brand" />
                 Top 10 Productos Más Vendidos
               </CardTitle>
             </CardHeader>
@@ -421,11 +421,11 @@ export default function AnalyticsPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">
+                      <p className="font-semibold text-brand">
                         {formatCurrency(product.total_revenue)}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Disponible: {product.current_stock}
+                        Disponible: {Number(product.current_stock).toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
@@ -436,9 +436,9 @@ export default function AnalyticsPage() {
 
           {/* Productos Críticos */}
           {criticalProducts.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-brand/50 bg-brand-light">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-800">
+                <CardTitle className="flex items-center gap-2 text-brand-hover">
                   <AlertTriangle className="h-5 w-5" />
                   Productos Críticos - ¡Acción Inmediata Requerida!
                 </CardTitle>
@@ -448,7 +448,7 @@ export default function AnalyticsPage() {
                   {criticalProducts.map((product) => (
                     <div
                       key={product.product_id}
-                      className="bg-white p-4 rounded-lg border border-red-200"
+                      className="bg-white p-4 rounded-lg border border-brand/50"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -459,7 +459,7 @@ export default function AnalyticsPage() {
                             {product.product_barcode}
                           </p>
                         </div>
-                        <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        <span className="bg-brand-hover text-white px-3 py-1 rounded-full text-xs font-semibold">
                           URGENTE
                         </span>
                       </div>
@@ -468,8 +468,8 @@ export default function AnalyticsPage() {
                           <span className="text-gray-500">
                             Cantidad Actual:
                           </span>
-                          <p className="font-semibold text-red-600">
-                            {product.current_stock}
+                          <p className="font-semibold text-brand-hover">
+                            {Number(product.current_stock).toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>
@@ -482,7 +482,7 @@ export default function AnalyticsPage() {
                           <span className="text-gray-500">
                             Días hasta agotarse:
                           </span>
-                          <p className="font-semibold text-red-600">
+                          <p className="font-semibold text-brand-hover">
                             {product.days_until_stockout}
                           </p>
                         </div>
@@ -502,9 +502,9 @@ export default function AnalyticsPage() {
 
           {/* Productos en Advertencia */}
           {warningProducts.length > 0 && (
-            <Card className="border-yellow-200 bg-yellow-50">
+            <Card className="border-brand/20 bg-brand-light/60">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-800">
+                <CardTitle className="flex items-center gap-2 text-brand-hover">
                   <AlertTriangle className="h-5 w-5" />
                   Productos en Advertencia - Planear Pedido Pronto
                 </CardTitle>
@@ -514,7 +514,7 @@ export default function AnalyticsPage() {
                   {warningProducts.map((product) => (
                     <div
                       key={product.product_id}
-                      className="bg-white p-4 rounded-lg border border-yellow-200"
+                      className="bg-white p-4 rounded-lg border border-brand/20"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -525,7 +525,7 @@ export default function AnalyticsPage() {
                             {product.product_barcode}
                           </p>
                         </div>
-                        <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        <span className="bg-brand text-white px-3 py-1 rounded-full text-xs font-semibold">
                           ADVERTENCIA
                         </span>
                       </div>
@@ -533,7 +533,7 @@ export default function AnalyticsPage() {
                         <div>
                           <span className="text-gray-500">Disponible:</span>
                           <p className="font-semibold">
-                            {product.current_stock}
+                            {Number(product.current_stock).toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>
@@ -640,9 +640,9 @@ export default function AnalyticsPage() {
         <TabsContent value="inventory" className="space-y-6">
           {/* Productos Críticos */}
           {criticalProducts.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-brand/50 bg-brand-light">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-800">
+                <CardTitle className="flex items-center gap-2 text-brand-hover">
                   <AlertTriangle className="h-5 w-5" />
                   Productos Críticos - ¡Acción Inmediata Requerida!
                 </CardTitle>
@@ -652,7 +652,7 @@ export default function AnalyticsPage() {
                   {criticalProducts.map((product) => (
                     <div
                       key={product.product_id}
-                      className="bg-white p-4 rounded-lg border border-red-200"
+                      className="bg-white p-4 rounded-lg border border-brand/50"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -663,7 +663,7 @@ export default function AnalyticsPage() {
                             {product.product_barcode}
                           </p>
                         </div>
-                        <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        <span className="bg-brand-hover text-white px-3 py-1 rounded-full text-xs font-semibold">
                           URGENTE
                         </span>
                       </div>
@@ -672,8 +672,8 @@ export default function AnalyticsPage() {
                           <span className="text-gray-500">
                             Cantidad Actual:
                           </span>
-                          <p className="font-semibold text-red-600">
-                            {product.current_stock}
+                          <p className="font-semibold text-brand-hover">
+                            {Number(product.current_stock).toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>
@@ -686,7 +686,7 @@ export default function AnalyticsPage() {
                           <span className="text-gray-500">
                             Días hasta agotarse:
                           </span>
-                          <p className="font-semibold text-red-600">
+                          <p className="font-semibold text-brand-hover">
                             {product.days_until_stockout}
                           </p>
                         </div>
@@ -706,9 +706,9 @@ export default function AnalyticsPage() {
 
           {/* Productos en Advertencia */}
           {warningProducts.length > 0 && (
-            <Card className="border-yellow-200 bg-yellow-50">
+            <Card className="border-brand/20 bg-brand-light/60">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-800">
+                <CardTitle className="flex items-center gap-2 text-brand-hover">
                   <AlertTriangle className="h-5 w-5" />
                   Productos en Advertencia - Planear Pedido Pronto
                 </CardTitle>
@@ -718,7 +718,7 @@ export default function AnalyticsPage() {
                   {warningProducts.map((product) => (
                     <div
                       key={product.product_id}
-                      className="bg-white p-4 rounded-lg border border-yellow-200"
+                      className="bg-white p-4 rounded-lg border border-brand/20"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -729,7 +729,7 @@ export default function AnalyticsPage() {
                             {product.product_barcode}
                           </p>
                         </div>
-                        <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        <span className="bg-brand text-white px-3 py-1 rounded-full text-xs font-semibold">
                           ADVERTENCIA
                         </span>
                       </div>
@@ -737,7 +737,7 @@ export default function AnalyticsPage() {
                         <div>
                           <span className="text-gray-500">Disponible:</span>
                           <p className="font-semibold">
-                            {product.current_stock}
+                            {Number(product.current_stock).toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>

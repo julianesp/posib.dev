@@ -33,6 +33,21 @@ function buildOrderSummaryText(lines: OrderSummaryLine[], shippingCost: number, 
   return `${itemsText}${shippingText}\n<b>Total a recibir:</b> ${formatCOP(total)}`;
 }
 
+/**
+ * Formas de entrega que ofrece la tienda (Configuración de la tienda → Envío /
+ * Recogida). Domicilio solo si el tendero lo activó (la columna nace en 0);
+ * recogida salvo que la apague. Si apagó las dos, se permite recoger para que
+ * la tienda no quede sin poder recibir pedidos. El checkout usa la misma regla.
+ */
+export function allowedDeliveryMethods(store: {
+  store_shipping_enabled?: number | null;
+  store_pickup_enabled?: number | null;
+}): { shipping: boolean; pickup: boolean } {
+  const shipping = Number(store.store_shipping_enabled) === 1;
+  const pickup = store.store_pickup_enabled == null || Number(store.store_pickup_enabled) !== 0;
+  return { shipping, pickup: pickup || !shipping };
+}
+
 interface StoreConfig {
   id: string;
   store_slug?: string;
@@ -192,10 +207,12 @@ app.get('/product/:slug/:productId', async (c) => {
       }, 404);
     }
 
-    // Obtener producto con toda su información
+    // Solo columnas públicas: nunca p.* (expondría el precio de compra,
+    // proveedor, código de barras, etc. a cualquiera que abra la tienda).
     const product = await c.env.DB.prepare(
       `SELECT
-        p.*,
+        p.id, p.name, p.description, p.sale_price, p.stock,
+        p.images, p.image_url, p.category_id,
         c.name as category_name,
         o.discount_percentage, o.id as offer_id, o.reason as offer_reason
       FROM products p
@@ -327,8 +344,15 @@ app.post('/orders/:slug', async (c) => {
         epayco_enabled: number;
         telegram_chat_id?: string | null;
         telegram_enabled?: number;
+        store_min_order?: number | null;
+        store_shipping_enabled?: number | null;
+        store_pickup_enabled?: number | null;
       }
-    >(c.env.DB, slug, 'store_name, store_whatsapp, epayco_enabled, telegram_chat_id, telegram_enabled');
+    >(
+      c.env.DB,
+      slug,
+      'store_name, store_whatsapp, epayco_enabled, telegram_chat_id, telegram_enabled, store_min_order, store_shipping_enabled, store_pickup_enabled'
+    );
 
     if (!store) {
       return c.json<APIResponse>({
@@ -339,11 +363,32 @@ app.post('/orders/:slug', async (c) => {
 
     const tenantDB = new TenantDB(c.env.DB, store.id);
 
-    // Generar número de pedido
+    // Forma de entrega permitida por la tienda (no solo por el navegador).
+    const isShipping = body.delivery_method !== 'pickup';
+    const delivery = allowedDeliveryMethods(store);
+    if (isShipping ? !delivery.shipping : !delivery.pickup) {
+      return c.json<APIResponse>({
+        success: false,
+        error: isShipping
+          ? 'Esta tienda no hace envíos a domicilio. Elige recoger en la tienda.'
+          : 'Esta tienda no tiene recogida en tienda. Elige envío a domicilio.',
+      }, 400);
+    }
+
+    // Número de pedido: siguiente del día después del MAYOR ya usado (no
+    // "ventas + 1": al borrar una venta ese conteo baja y repetía números).
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-    const saleCount = await tenantDB.count('sales');
-    const orderNumber = `WEB-${dateStr}-${String(saleCount + 1).padStart(6, '0')}`;
+    const prefix = `WEB-${dateStr}-`;
+    const last = await c.env.DB.prepare(
+      `SELECT sale_number FROM sales
+       WHERE tenant_id = ? AND sale_number LIKE ?
+       ORDER BY sale_number DESC LIMIT 1`
+    )
+      .bind(store.id, `${prefix}%`)
+      .first<{ sale_number: string }>();
+    const lastSeq = last ? parseInt(last.sale_number.slice(prefix.length), 10) || 0 : 0;
+    const orderNumber = `${prefix}${String(lastSeq + 1).padStart(6, '0')}`;
 
     // Los precios, descuentos y el envío se calculan aquí con los datos de la
     // tienda; del cliente solo se aceptan producto, cantidad y zona de envío.
@@ -417,8 +462,17 @@ app.post('/orders/:slug', async (c) => {
       });
     }
 
+    // Pedido mínimo de la tienda: sobre el subtotal con ofertas, sin envío
+    // (igual que el checkout).
+    const minOrder = Number(store.store_min_order) || 0;
+    if (minOrder > 0 && subtotal < minOrder) {
+      return c.json<APIResponse>({
+        success: false,
+        error: `El pedido mínimo de esta tienda es de ${formatCOP(minOrder)}.`,
+      }, 400);
+    }
+
     // Envío: el costo sale de la zona elegida, nunca del cliente.
-    const isShipping = body.delivery_method !== 'pickup';
     let shippingCost = 0;
     let shippingZoneName: string | null = null;
     if (isShipping) {
@@ -550,12 +604,16 @@ app.post('/orders/:slug/:orderNumber/reference', async (c) => {
       return c.json<APIResponse>({ success: false, error: 'Store not found or disabled' }, 404);
     }
 
-    const sale = await c.env.DB.prepare(
+    // Se busca por número Y por el hash del código secreto: aunque existieran
+    // dos pedidos con el mismo número (antes de corregir la numeración), la
+    // referencia solo cae en el pedido de quien tiene el código.
+    const tokenHash = typeof body.token === 'string' && body.token ? await hashOrderToken(body.token) : null;
+    const sale = !tokenHash ? null : await c.env.DB.prepare(
       `SELECT id, total, status, payment_status, shipping_cost, order_token, payment_reference, notes
        FROM sales
-       WHERE tenant_id = ? AND sale_number = ?`
+       WHERE tenant_id = ? AND sale_number = ? AND order_token = ?`
     )
-      .bind(store.id, orderNumber)
+      .bind(store.id, orderNumber, tokenHash)
       .first<{
         id: string;
         total: number;
@@ -568,8 +626,7 @@ app.post('/orders/:slug/:orderNumber/reference', async (c) => {
       }>();
 
     // Mismo 404 para "no existe" y "token incorrecto": no revelar qué pedidos hay.
-    const tokenHash = typeof body.token === 'string' && body.token ? await hashOrderToken(body.token) : null;
-    if (!sale || !sale.order_token || !tokenHash || sale.order_token !== tokenHash) {
+    if (!sale) {
       return c.json<APIResponse>({ success: false, error: 'Order not found' }, 404);
     }
 

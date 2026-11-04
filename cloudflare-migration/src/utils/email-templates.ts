@@ -146,13 +146,17 @@ export function subscriptionReminderTemplate(data: SubscriptionReminderData): st
       </div>
 
       <p style="font-size: 16px; color: #374151;">
-        Para continuar disfrutando de todas las funciones de tu sistema POS,
-        asegúrate de renovar tu suscripción antes de la fecha de vencimiento.
+        Paga desde aquí en un clic y sigue vendiendo sin interrupciones.${data.is_trial ? '' : `
+        <strong>No pierdes días:</strong> el nuevo mes se suma a partir de la fecha en que vence el actual.`}
       </p>
 
       <div style="text-align: center;">
-        <a href="${data.payment_link}" class="button">Renovar Suscripción</a>
+        <a href="${data.payment_link}" class="button" style="font-size: 18px; padding: 14px 32px;">Pagar ahora</a>
       </div>
+
+      <p style="font-size: 13px; color: #6b7280; text-align: center;">
+        El botón abre el pago seguro con ePayco. Si no has iniciado sesión, primero te pedirá entrar.
+      </p>
 
       <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
         ¿Tienes alguna pregunta? Contáctanos respondiendo a este email.

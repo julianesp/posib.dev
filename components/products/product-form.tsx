@@ -1209,7 +1209,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       {/* Modal de Opciones de Escaneo */}
       {showScannerOptions && (
-        <div className="fixed inset-0  bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
           <Card className="max-w-md w-full">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1281,7 +1281,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       {/* Modal del Escáner de Códigos de Barras - HTML5-QRCode (Optimizado) */}
       {showScanner && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full overflow-hidden">
             <div className="bg-brand text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">

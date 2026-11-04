@@ -570,6 +570,8 @@ export interface SubscriptionReminderData {
   next_billing_date: string;
   plan_price: number;
   payment_link: string;
+  /** En prueba gratis el mes pagado cuenta desde hoy (no se suma al final). */
+  is_trial?: boolean;
 }
 
 export interface DailyReportData {

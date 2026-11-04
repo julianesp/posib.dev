@@ -44,7 +44,7 @@ export function MoreActions({
         data-guide={guideTarget}
         aria-label={pending > 0 ? `${title} (${pending} por revisar)` : title}
         title={title}
-        className="more-actions-tab fixed right-0 top-1/2 z-40 flex flex-col items-center gap-1.5 rounded-l-2xl bg-brand py-3 pl-2.5 pr-2 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+        className="more-actions-tab cursor-pointer fixed right-0 top-1/2 z-40 flex flex-col items-center gap-1.5 rounded-l-2xl bg-brand py-3 pl-2.5 pr-2 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       >
         <LayoutGrid className="h-5 w-5" />
         <span className="text-[11px] font-semibold leading-none [writing-mode:vertical-rl] rotate-180">
@@ -58,7 +58,7 @@ export function MoreActions({
       </DialogPrimitive.Trigger>
 
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="more-actions-overlay fixed inset-0 z-50 bg-black/40" />
+        <DialogPrimitive.Overlay className="more-actions-overlay fixed inset-0 z-50 modal-backdrop" />
         <DialogPrimitive.Content className="more-actions-sheet fixed inset-y-0 right-0 z-50 flex w-[88vw] max-w-sm flex-col bg-white shadow-2xl outline-none">
           <div className="flex items-center justify-between border-b px-4 py-4">
             <DialogPrimitive.Title className="text-lg font-semibold text-gray-900">

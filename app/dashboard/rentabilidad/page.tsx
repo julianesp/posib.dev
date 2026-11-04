@@ -20,6 +20,7 @@ import { PurchaseOrderWithItems, SaleWithRelations } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { getItemCost, getItemRevenue, startOfDay } from '@/lib/profit-helpers';
 import { PageGlossary } from '@/components/dashboard/page-glossary';
+import { PartnersSplitCard } from '@/components/profit/partners-split-card';
 import { InvestmentSection } from '@/components/dashboard/investment-section';
 
 type Period = 'today' | 'week' | 'month' | '3months' | 'all';
@@ -386,6 +387,12 @@ export default function RentabilidadPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Negocio con socios: cuánto de la ganancia le toca a cada uno */}
+      <PartnersSplitCard
+        profit={analysis.totalProfit}
+        periodLabel={PERIODS.find((p) => p.id === period)?.label ?? ''}
+      />
 
       {/* Ranking de productos por ganancia */}
       <Card data-guide="profit-ranking">
