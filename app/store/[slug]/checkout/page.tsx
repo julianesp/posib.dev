@@ -542,9 +542,14 @@ export default function CheckoutPage() {
                   <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg text-left">
                     <p className="text-sm text-yellow-900">
                       ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado
-                      pero aún NO está pagado. Paga con Nequi escaneando el
-                      código de abajo y luego escribe el código de referencia de
-                      tu pago para que el tendero lo verifique.
+                      pero aún NO está pagado.{" "}
+                      {config.payment_qr_url
+                        ? "Paga con Nequi escaneando el código de abajo"
+                        : nequiLink
+                          ? "Paga con el botón \"Abrir Nequi\" de abajo"
+                          : "Paga desde tu app de Nequi al número de abajo"}{" "}
+                      y luego escribe el código de referencia de tu pago para
+                      que el tendero lo verifique.
                     </p>
                   </div>
                 )}
@@ -623,6 +628,15 @@ export default function CheckoutPage() {
                           : ""}
                         El número ya queda copiado: en Nequi ve a <strong>Enviar plata</strong>,
                         pégalo y envía el monto exacto. Luego vuelve aquí y escribe la referencia.
+                      </p>
+                    )}
+
+                    {/* En el computador no hay app de Nequi: se indica que en el
+                        celular la página trae el botón que la abre */}
+                    {!nequiLink && storeNequiNumber && (
+                      <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-purple-800">
+                        <Smartphone className="h-4 w-4 shrink-0" />
+                        Desde el celular verás un botón que copia el número y abre Nequi.
                       </p>
                     )}
 
@@ -731,8 +745,9 @@ export default function CheckoutPage() {
                 <p className="font-semibold mb-2">¿Cómo completo mi pedido?</p>
                 <ul className="space-y-1 list-decimal list-inside">
                   <li>
-                    Paga el total exacto escaneando el código QR de Nequi con tu
-                    celular.
+                    {config.payment_qr_url
+                      ? "Paga el total exacto escaneando el código QR de Nequi con tu celular."
+                      : "Paga el total exacto desde tu app de Nequi al número de la tienda."}
                   </li>
                   <li>
                     Escribe arriba el código de referencia que te muestra el
