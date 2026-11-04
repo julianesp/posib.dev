@@ -4,8 +4,11 @@
  * Nequi no publica un enlace para abrir "Enviar plata" con número y monto ya
  * puestos, así que se abre la app y el cliente pega el número (el botón lo copia
  * antes de abrirla):
- *  - Android: intent de Chrome al paquete com.nequi.MobileApp; si no la tiene
- *    instalada, Chrome lleva a Play Store (browser_fallback_url).
+ *  - Android: intent de Chrome con el esquema `nequi`, el único que la app
+ *    declara como BROWSABLE (verificado con `adb shell dumpsys package
+ *    com.nequi.MobileApp`, 2026-11-04). Abrir su pantalla de inicio
+ *    (action MAIN) NO sirve: Chrome solo abre actividades BROWSABLE y caía a
+ *    Play Store. Si no tiene Nequi instalada, Chrome lleva a Play Store.
  *  - iPhone: no hay esquema público; se abre su página en App Store, que muestra
  *    "Abrir" si ya está instalada.
  *  - Computador: null (se paga con el celular escaneando el QR).
@@ -27,8 +30,8 @@ export function detectNequiPlatform(userAgent: string, maxTouchPoints = 0): Nequ
 export function nequiAppLink(platform: NequiPlatform): string | null {
   if (platform === 'android') {
     return (
-      `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;` +
-      `package=${NEQUI_ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(NEQUI_PLAY_STORE_URL)};end`
+      `intent://#Intent;scheme=nequi;package=${NEQUI_ANDROID_PACKAGE};` +
+      `S.browser_fallback_url=${encodeURIComponent(NEQUI_PLAY_STORE_URL)};end`
     );
   }
   if (platform === 'ios') return NEQUI_APP_STORE_URL;

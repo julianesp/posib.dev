@@ -557,32 +557,6 @@ export default function CheckoutPage() {
                       Paga con Nequi
                     </p>
 
-                    {/* En el celular: un toque copia el número y abre Nequi */}
-                    {nequiLink && storeNequiNumber && (
-                      <a
-                        href={nequiLink}
-                        onClick={() => {
-                          navigator.clipboard?.writeText(storeNequiNumber).catch(() => {});
-                          toast.success("Número copiado. Pégalo en Nequi → Enviar plata", {
-                            duration: 6000,
-                          });
-                        }}
-                        className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 py-4 text-base font-bold text-white shadow-md transition-colors hover:bg-purple-800 active:scale-[0.98]"
-                      >
-                        <Smartphone className="h-5 w-5" />
-                        Abrir Nequi y pagar {formatCurrency(orderTotal)}
-                      </a>
-                    )}
-                    {nequiLink && storeNequiNumber && (
-                      <p className="mb-4 text-center text-xs text-purple-800">
-                        {nequiPlatform === "ios"
-                          ? "Se abre Nequi en App Store: toca \"Abrir\". "
-                          : ""}
-                        El número ya queda copiado: en Nequi ve a <strong>Enviar plata</strong>,
-                        pégalo y envía el monto exacto. Luego vuelve aquí y escribe la referencia.
-                      </p>
-                    )}
-
                     {config.payment_qr_url && (
                       <div className="flex flex-col items-center mb-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -624,6 +598,32 @@ export default function CheckoutPage() {
                           Copiar
                         </Button>
                       </div>
+                    )}
+
+                    {/* En el celular: un toque copia el número y abre Nequi */}
+                    {nequiLink && storeNequiNumber && (
+                      <a
+                        href={nequiLink}
+                        onClick={() => {
+                          navigator.clipboard?.writeText(storeNequiNumber).catch(() => {});
+                          toast.success("Número copiado. Pégalo en Nequi → Enviar plata", {
+                            duration: 6000,
+                          });
+                        }}
+                        className="mt-3 mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 py-4 text-base font-bold text-white shadow-md transition-colors hover:bg-purple-800 active:scale-[0.98]"
+                      >
+                        <Smartphone className="h-5 w-5" />
+                        Abrir Nequi y pagar {formatCurrency(orderTotal)}
+                      </a>
+                    )}
+                    {nequiLink && storeNequiNumber && (
+                      <p className="text-center text-xs text-purple-800">
+                        {nequiPlatform === "ios"
+                          ? "Se abre Nequi en App Store: toca \"Abrir\". "
+                          : ""}
+                        El número ya queda copiado: en Nequi ve a <strong>Enviar plata</strong>,
+                        pégalo y envía el monto exacto. Luego vuelve aquí y escribe la referencia.
+                      </p>
                     )}
 
                     <p className="text-sm text-purple-700 mt-3 text-center">

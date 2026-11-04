@@ -16,7 +16,10 @@ describe('botón "Abrir Nequi" del checkout', () => {
 
   it('en Android abre la app de Nequi y, si no la tiene, Play Store', () => {
     const link = nequiAppLink('android')!;
-    expect(link.startsWith('intent:#Intent;')).toBe(true);
+    // El esquema nequi:// es el que la app declara como BROWSABLE; la acción
+    // MAIN (pantalla de inicio) Chrome no la abre y caía a Play Store.
+    expect(link.startsWith('intent://#Intent;scheme=nequi;')).toBe(true);
+    expect(link).not.toContain('action=android.intent.action.MAIN');
     expect(link).toContain('package=com.nequi.MobileApp;');
     expect(link).toContain('S.browser_fallback_url=' + encodeURIComponent('https://play.google.com/store/apps/details?id=com.nequi.MobileApp'));
     expect(link.endsWith(';end')).toBe(true);
