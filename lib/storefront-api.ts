@@ -232,13 +232,19 @@ export async function submitPaymentReference(
   return data.data as { payment_reference: string };
 }
 
-export async function createOrder(slug: string, orderData: CreateOrderData): Promise<OrderResponse> {
+export async function createOrder(
+  slug: string,
+  orderData: CreateOrderData,
+  /** Sesión del cliente: el pedido queda en su "Mis compras". */
+  sessionToken?: string | null
+): Promise<OrderResponse> {
   const url = `${WORKER_URL}/api/storefront/orders/${slug}`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
     },
     body: JSON.stringify(orderData),
   });
@@ -270,3 +276,33 @@ export async function getStoreShippingZones(slug: string): Promise<ShippingZoneP
   return fetchStorefrontAPI<ShippingZonePublic[]>(`/api/storefront/shipping-zones/${slug}`);
 }
 
+
+/** "Mis compras" del cliente con sesión (GET /api/storefront/me/:slug/orders). */
+export type CustomerOrderStatus = 'pagado' | 'por_verificar' | 'pendiente' | 'cancelado';
+
+export interface CustomerOrder {
+  order_number: string;
+  created_at: string;
+  subtotal: number;
+  shipping_cost: number;
+  total: number;
+  payment_reference: string | null;
+  payment_method: string;
+  status: CustomerOrderStatus;
+  items: { name: string; quantity: number; unit_price: number; subtotal: number }[];
+}
+
+export class SessionExpiredError extends Error {}
+
+export async function getMyOrders(
+  slug: string,
+  sessionToken: string
+): Promise<{ store: { name: string | null; phone: string | null; address: string | null }; orders: CustomerOrder[] }> {
+  const response = await fetch(`${WORKER_URL}/api/storefront/me/${slug}/orders`, {
+    headers: { Authorization: `Bearer ${sessionToken}` },
+  });
+  if (response.status === 401) throw new SessionExpiredError('Inicia sesión de nuevo');
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) throw new Error(data.error || 'No se pudieron cargar tus compras');
+  return data.data;
+}

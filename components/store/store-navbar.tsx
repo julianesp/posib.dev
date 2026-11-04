@@ -16,6 +16,7 @@ import {
   Info,
   User,
   LogOut,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StoreConfig } from "@/lib/storefront-api";
@@ -36,6 +37,8 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  // Menú del cliente: se abre al tocarlo (en el celular no hay "hover").
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   // Sube cada vez que el conteo AUMENTA. Sirve de key para re-montar el badge
   // y disparar el "pop"; no se anima al quitar productos.
@@ -156,27 +159,49 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
           <div className="flex items-center gap-2">
             {/* Usuario / Login */}
             {isAuthenticated ? (
-              <div className="relative group">
+              <div className="relative">
                 <Button
                   variant="outline"
                   size="sm"
                   style={{ borderColor: primaryColor, color: primaryColor }}
+                  onClick={() => setUserMenuOpen((open) => !open)}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
                 >
                   <User className="h-5 w-5" />
                   <span className="hidden sm:inline ml-2">{user?.name}</span>
                 </Button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                {userMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg z-50"
+                  onMouseLeave={() => setUserMenuOpen(false)}
+                >
                   <div className="p-3 border-b text-sm text-gray-600">
                     {user?.email}
                   </div>
+                  <Link
+                    href={`/store/${slug}/mis-compras`}
+                    role="menuitem"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-50"
+                  >
+                    <Receipt className="h-4 w-4" />
+                    Mis compras
+                  </Link>
                   <button
-                    onClick={logout}
+                    role="menuitem"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      logout();
+                    }}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
                   >
                     <LogOut className="h-4 w-4" />
                     Cerrar sesión
                   </button>
                 </div>
+                )}
               </div>
             ) : (
               <Button

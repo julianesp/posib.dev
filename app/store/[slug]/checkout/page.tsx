@@ -16,6 +16,7 @@ import {
 } from "@/lib/storefront-api";
 import { allowedDeliveryMethods } from "@/lib/storefront-delivery";
 import { hasValidNequiNumber } from "@/lib/store-readiness";
+import { useStorefrontUser } from "@/lib/storefront-user-context";
 import { detectNequiPlatform, nequiAppLink } from "@/lib/nequi-app-link";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
@@ -77,6 +78,15 @@ export default function CheckoutPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  // Cliente con cuenta: sus datos se llenan solos y el pedido queda en "Mis compras".
+  const { user: account, token: sessionToken } = useStorefrontUser();
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  if (account && prefilledFor !== account.id) {
+    setPrefilledFor(account.id);
+    if (!customerName) setCustomerName(account.name);
+    if (!customerPhone && account.phone) setCustomerPhone(account.phone);
+    if (!customerEmail) setCustomerEmail(account.email);
+  }
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "shipping">(
     "pickup"
   );
@@ -332,7 +342,7 @@ export default function CheckoutPage() {
       };
 
       // Crear pedido (el servidor calcula precios, ofertas y envío)
-      const response = await createOrder(slug, orderData);
+      const response = await createOrder(slug, orderData, sessionToken);
       const whatsapp = response.store_whatsapp || config?.store_whatsapp || "";
 
       // Guardar datos del pedido
@@ -739,6 +749,16 @@ export default function CheckoutPage() {
                       Volver a la tienda
                     </Button>
                   </Link>
+                  {sessionToken ? (
+                    <Link href={`/store/${slug}/mis-compras`} className="text-center text-sm font-semibold underline">
+                      Ver este pedido en Mis compras
+                    </Link>
+                  ) : (
+                    <p className="text-center text-xs text-gray-600">
+                      ¿Quieres guardar el registro de tus compras? Toca <strong>Entrar</strong> arriba y crea tu cuenta
+                      antes de tu próximo pedido.
+                    </p>
+                  )}
                 </div>
               </div>
 

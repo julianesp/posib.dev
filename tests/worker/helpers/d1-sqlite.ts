@@ -22,6 +22,7 @@ const MIGRATIONS = [
   'migrations/027_product_siigo_fields.sql',
   'migrations/031_dian_e_invoicing.sql',
   'migrations/032_partnership.sql',
+  'migrations/033_storefront_accounts.sql',
 ];
 
 function toSqlValue(value: unknown): SQLInputValue {

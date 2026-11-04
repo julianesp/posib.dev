@@ -60,8 +60,8 @@ export function StorefrontAuthModal({ open, onOpenChange }: StorefrontAuthModalP
           <DialogTitle>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</DialogTitle>
           <DialogDescription>
             {isLogin
-              ? 'Accede a tu cuenta para guardar favoritos y ver tu historial de compras'
-              : 'Crea una cuenta para guardar tus favoritos y compras'}
+              ? 'Entra para ver tus compras y descargar tus facturas pagadas'
+              : 'Con tu cuenta tus pedidos quedan guardados en "Mis compras", con su factura cuando la tienda confirme el pago'}
           </DialogDescription>
         </DialogHeader>
 

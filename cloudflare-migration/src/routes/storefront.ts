@@ -9,6 +9,13 @@ import { TenantDB, generateId } from '../utils/db-helpers';
 import { findActiveStore, hasValidNequiNumber, type StoreAccessRow } from '../utils/storefront-access';
 import { escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
 import { hashOrderToken, isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
+import {
+  bearerToken,
+  createStorefrontSession,
+  customerOrderStatus,
+  deleteStorefrontSession,
+  findStorefrontAccount,
+} from '../utils/storefront-session';
 
 const app = new Hono<AppEnv>();
 
@@ -509,6 +516,9 @@ app.post('/orders/:slug', async (c) => {
     const orderToken = crypto.randomUUID();
     const orderTokenHash = await hashOrderToken(orderToken);
 
+    // Con la sesión iniciada, el pedido queda en "Mis compras" del cliente.
+    const account = await findStorefrontAccount(c.env.DB, bearerToken(c.req.header('Authorization')), store.id);
+
     // Crear venta/pedido
     const saleData: any = {
       id: saleId,
@@ -529,6 +539,7 @@ app.post('/orders/:slug', async (c) => {
       due_date: null,
       shipping_cost: shippingCost,
       order_token: orderTokenHash,
+      ...(account ? { storefront_user_id: account.id } : {}),
     };
 
     await tenantDB.insert('sales', saleData);
@@ -777,7 +788,10 @@ app.post('/auth/register/:slug', async (c) => {
       phone?: string;
     }>();
 
-    const { name, email, password, phone } = body;
+    const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : '';
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body.password === 'string' ? body.password : '';
+    const phone = typeof body.phone === 'string' ? body.phone.trim().slice(0, 20) : '';
 
     // Validar campos requeridos
     if (!slug || !name || !email || !password) {
@@ -815,7 +829,7 @@ app.post('/auth/register/:slug', async (c) => {
 
     // Verificar que el email no esté ya registrado en esta tienda
     const existing = await c.env.DB.prepare(
-      `SELECT id FROM storefront_users WHERE tenant_id = ? AND email = ?`
+      `SELECT id FROM storefront_users WHERE tenant_id = ? AND lower(email) = ?`
     )
       .bind(store.id, email)
       .first();
@@ -865,13 +879,16 @@ app.post('/auth/register/:slug', async (c) => {
       .bind(userId, store.id, email, name, phone || null, passwordHash)
       .run();
 
+    const token = await createStorefrontSession(c.env.DB, userId, store.id);
     return c.json<APIResponse>({
       success: true,
       data: {
         id: userId,
         email,
         name,
+        phone: phone || null,
         createdAt: new Date().toISOString(),
+        token,
       },
     }, 201);
   } catch (error: any) {
@@ -893,7 +910,8 @@ app.post('/auth/login/:slug', async (c) => {
       password: string;
     }>();
 
-    const { email, password } = body;
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body.password === 'string' ? body.password : '';
 
     // Validar campos requeridos
     if (!slug || !email || !password) {
@@ -914,7 +932,7 @@ app.post('/auth/login/:slug', async (c) => {
 
     // Buscar usuario
     const user = await c.env.DB.prepare(
-      `SELECT id, email, name, phone, password_hash, created_at FROM storefront_users WHERE tenant_id = ? AND email = ?`
+      `SELECT id, email, name, phone, password_hash, created_at FROM storefront_users WHERE tenant_id = ? AND lower(email) = ?`
     )
       .bind(store.id, email)
       .first<{
@@ -969,13 +987,16 @@ app.post('/auth/login/:slug', async (c) => {
       }, 401);
     }
 
+    const token = await createStorefrontSession(c.env.DB, user.id, store.id);
     return c.json<APIResponse>({
       success: true,
       data: {
         id: user.id,
         email: user.email,
         name: user.name,
+        phone: user.phone ?? null,
         createdAt: user.created_at,
+        token,
       },
     });
   } catch (error: any) {
@@ -984,6 +1005,92 @@ app.post('/auth/login/:slug', async (c) => {
       success: false,
       error: 'Error al iniciar sesión',
     }, 500);
+  }
+});
+
+// POST /api/storefront/auth/logout/:slug - Cerrar la sesión del cliente
+app.post('/auth/logout/:slug', async (c) => {
+  const token = bearerToken(c.req.header('Authorization'));
+  if (token) await deleteStorefrontSession(c.env.DB, token);
+  return c.json<APIResponse>({ success: true });
+});
+
+// GET /api/storefront/me/:slug - Datos del cliente con sesión (para llenar el checkout)
+app.get('/me/:slug', async (c) => {
+  const store = await findActiveStore(c.env.DB, c.req.param('slug'));
+  if (!store) return c.json<APIResponse>({ success: false, error: 'Tienda no encontrada' }, 404);
+  const account = await findStorefrontAccount(c.env.DB, bearerToken(c.req.header('Authorization')), store.id);
+  if (!account) return c.json<APIResponse>({ success: false, error: 'Inicia sesión de nuevo' }, 401);
+  return c.json<APIResponse>({
+    success: true,
+    data: { id: account.id, email: account.email, name: account.name, phone: account.phone, createdAt: account.created_at },
+  });
+});
+
+// GET /api/storefront/me/:slug/orders - "Mis compras": pedidos del cliente en esta tienda
+app.get('/me/:slug/orders', async (c) => {
+  try {
+    const store = await findActiveStore<StoreAccessRow & { store_name?: string; store_phone?: string; store_address?: string }>(
+      c.env.DB,
+      c.req.param('slug'),
+      'store_name, store_phone, store_address'
+    );
+    if (!store) return c.json<APIResponse>({ success: false, error: 'Tienda no encontrada' }, 404);
+    const account = await findStorefrontAccount(c.env.DB, bearerToken(c.req.header('Authorization')), store.id);
+    if (!account) return c.json<APIResponse>({ success: false, error: 'Inicia sesión de nuevo' }, 401);
+
+    const { results: sales } = await c.env.DB.prepare(
+      `SELECT id, sale_number, created_at, subtotal, shipping_cost, total, status, payment_status,
+              payment_reference, payment_method
+       FROM sales
+       WHERE tenant_id = ? AND storefront_user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 100`
+    )
+      .bind(store.id, account.id)
+      .all<{
+        id: string; sale_number: string; created_at: string; subtotal: number; shipping_cost: number | null;
+        total: number; status: string; payment_status: string | null; payment_reference: string | null; payment_method: string;
+      }>();
+
+    const ids = sales.map((s) => s.id);
+    const itemsBySale = new Map<string, { name: string; quantity: number; unit_price: number; subtotal: number }[]>();
+    if (ids.length > 0) {
+      const { results: items } = await c.env.DB.prepare(
+        `SELECT si.sale_id, COALESCE(p.name, 'Producto') AS name, si.quantity, si.unit_price, si.subtotal
+         FROM sale_items si
+         LEFT JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
+         WHERE si.tenant_id = ? AND si.sale_id IN (${ids.map(() => '?').join(',')})`
+      )
+        .bind(store.id, ...ids)
+        .all<{ sale_id: string; name: string; quantity: number; unit_price: number; subtotal: number }>();
+      for (const it of items) {
+        const list = itemsBySale.get(it.sale_id) ?? [];
+        list.push({ name: it.name, quantity: it.quantity, unit_price: it.unit_price, subtotal: it.subtotal });
+        itemsBySale.set(it.sale_id, list);
+      }
+    }
+
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        store: { name: store.store_name ?? null, phone: store.store_phone ?? null, address: store.store_address ?? null },
+        orders: sales.map((s) => ({
+          order_number: s.sale_number,
+          created_at: s.created_at,
+          subtotal: s.subtotal,
+          shipping_cost: Number(s.shipping_cost) || 0,
+          total: s.total,
+          payment_reference: s.payment_reference,
+          payment_method: s.payment_method,
+          status: customerOrderStatus(s),
+          items: itemsBySale.get(s.id) ?? [],
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching customer orders:', error);
+    return c.json<APIResponse>({ success: false, error: 'No se pudieron cargar tus compras' }, 500);
   }
 });
 
