@@ -32,6 +32,8 @@ interface InvoiceModalProps {
   customer?: Customer | null;
   storeInfo: UserProfile;
   cashierName?: string;
+  /** Celular para "Enviar por WhatsApp" cuando no hay cliente registrado (pedido web). */
+  defaultPhone?: string;
 }
 
 const INVOICE_FORMAT_KEY = "invoice_format";
@@ -44,10 +46,11 @@ export function InvoiceModal({
   customer,
   storeInfo,
   cashierName,
+  defaultPhone,
 }: InvoiceModalProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { getToken } = useAuth();
-  const [phoneNumber, setPhoneNumber] = useState(customer?.phone || "");
+  const [phoneNumber, setPhoneNumber] = useState(customer?.phone || defaultPhone || "");
   // Carta o tira térmica; se recuerda en este navegador (la impresora es del equipo)
   const [invoiceFormat, setInvoiceFormat] = useState<InvoiceFormat>("carta");
   const ticketWidthMm = getTicketWidthMm(invoiceFormat);

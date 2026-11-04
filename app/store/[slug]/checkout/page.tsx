@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,6 +15,7 @@ import {
   submitPaymentReference,
 } from "@/lib/storefront-api";
 import { allowedDeliveryMethods } from "@/lib/storefront-delivery";
+import { detectNequiPlatform, nequiAppLink } from "@/lib/nequi-app-link";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import {
@@ -37,6 +38,7 @@ import {
   MessageSquare,
   QrCode,
   Download,
+  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+
+// El dispositivo del cliente no cambia mientras está en la página.
+const noopSubscribe = () => () => {};
 
 type CartItem = StoreCartItem;
 
@@ -83,10 +88,17 @@ export default function CheckoutPage() {
   const [orderTotal, setOrderTotal] = useState(0);
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
   const [storeNequiNumber, setStoreNequiNumber] = useState("");
+  // Celular del cliente (Android / iPhone) para el botón "Abrir Nequi"; en el
+  // servidor y en computador no hay botón.
+  const nequiPlatform = useSyncExternalStore(
+    noopSubscribe,
+    () => detectNequiPlatform(navigator.userAgent, navigator.maxTouchPoints),
+    () => "desktop" as const,
+  );
+  const nequiLink = nequiAppLink(nequiPlatform);
   // Items del pedido confirmado, preservados para el PDF (el carrito se vacía)
   const [orderItems, setOrderItems] = useState<CartItem[]>([]);
   const [orderShippingCost, setOrderShippingCost] = useState(0);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Referencia de pago de Nequi: el pedido no se factura como pagado hasta que
   // el cliente la registra y el tendero la verifica en su app.
@@ -154,37 +166,6 @@ export default function CheckoutPage() {
       toast.error("Error al cargar el checkout");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Datos comunes para generar el comprobante PDF del pedido
-  const buildOrderPdfData = () => ({
-    storeName: config?.store_name || "Tienda",
-    storePhone: config?.store_phone,
-    storeWhatsapp: storeWhatsApp || config?.store_whatsapp,
-    storeAddress: config?.store_address,
-    orderNumber,
-    paymentReference: referenceSent || undefined,
-    customerName,
-    customerPhone,
-    deliveryMethod,
-    deliveryAddress: deliveryMethod === "shipping" ? deliveryAddress : undefined,
-    items: orderItems,
-    shippingCost: orderShippingCost,
-    notes: notes.trim() || undefined,
-    primaryColor: config?.store_primary_color,
-  });
-
-  const handleDownloadPdf = async () => {
-    try {
-      setDownloadingPdf(true);
-      const { downloadOrderPDF } = await import("@/lib/storefront-order-pdf");
-      await downloadOrderPDF(buildOrderPdfData());
-    } catch (err) {
-      console.error("Error generando PDF:", err);
-      toast.error("No se pudo generar el comprobante");
-    } finally {
-      setDownloadingPdf(false);
     }
   };
 
@@ -576,6 +557,32 @@ export default function CheckoutPage() {
                       Paga con Nequi
                     </p>
 
+                    {/* En el celular: un toque copia el número y abre Nequi */}
+                    {nequiLink && storeNequiNumber && (
+                      <a
+                        href={nequiLink}
+                        onClick={() => {
+                          navigator.clipboard?.writeText(storeNequiNumber).catch(() => {});
+                          toast.success("Número copiado. Pégalo en Nequi → Enviar plata", {
+                            duration: 6000,
+                          });
+                        }}
+                        className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 py-4 text-base font-bold text-white shadow-md transition-colors hover:bg-purple-800 active:scale-[0.98]"
+                      >
+                        <Smartphone className="h-5 w-5" />
+                        Abrir Nequi y pagar {formatCurrency(orderTotal)}
+                      </a>
+                    )}
+                    {nequiLink && storeNequiNumber && (
+                      <p className="mb-4 text-center text-xs text-purple-800">
+                        {nequiPlatform === "ios"
+                          ? "Se abre Nequi en App Store: toca \"Abrir\". "
+                          : ""}
+                        El número ya queda copiado: en Nequi ve a <strong>Enviar plata</strong>,
+                        pégalo y envía el monto exacto. Luego vuelve aquí y escribe la referencia.
+                      </p>
+                    )}
+
                     {config.payment_qr_url && (
                       <div className="flex flex-col items-center mb-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -686,24 +693,9 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="grid grid-cols-1 gap-3">
-                  {/* Descargar el resumen del pedido en PDF (lista de
-                      productos, NO es un comprobante de pago) */}
-                  <Button
-                    type="button"
-                    size="lg"
-                    variant="outline"
-                    className="w-full text-lg"
-                    onClick={handleDownloadPdf}
-                    disabled={downloadingPdf}
-                  >
-                    {downloadingPdf ? (
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="h-5 w-5 mr-2" />
-                    )}
-                    Descargar mi pedido (PDF)
-                  </Button>
-
+                  {/* Sin "Descargar PDF": antes de que el tendero confirme el pago,
+                      un documento descargable parecía una factura válida. La
+                      factura (con sello PAGADA) le llega al cliente al confirmar. */}
                   {/* Aviso opcional por WhatsApp, ya con la referencia registrada */}
                   {storeWhatsApp && referenceSent && (
                     <Button
@@ -748,7 +740,7 @@ export default function CheckoutPage() {
                   </li>
                   <li>
                     El tendero verifica tu pago en su Nequi y confirma tu
-                    pedido. Solo entonces se genera tu factura como pagada.
+                    pedido. Ahí se genera tu factura con el sello PAGADA y, si dejaste tu correo, te llega por email.
                   </li>
                   <li>
                     {deliveryMethod === "pickup"
@@ -836,6 +828,9 @@ export default function CheckoutPage() {
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
                       />
+                      <p className="mt-1 text-xs text-gray-600">
+                        Ahí te llega tu factura cuando la tienda confirme el pago.
+                      </p>
                     </div>
                   </div>
                 </CardContent>

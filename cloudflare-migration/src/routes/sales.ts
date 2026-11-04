@@ -7,6 +7,8 @@ import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 import { isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
+import { sendEmail, logEmail } from '../utils/email';
+import { buildWebOrderInvoiceEmail, parseWebOrderNotes } from '../utils/web-order-invoice';
 
 const app = new Hono<AppEnv>();
 
@@ -513,6 +515,79 @@ app.post('/import', async (c) => {
   }
 });
 
+export type InvoiceEmailResult =
+  | { status: 'sent'; to: string }
+  | { status: 'no_email' }
+  | { status: 'failed'; to: string; error: string };
+
+/** Envía al cliente la factura de un pedido web ya pagado. Ver utils/web-order-invoice.ts. */
+async function sendWebOrderInvoice(env: Env, tenantId: string, sale: Sale, items: SaleItem[]): Promise<InvoiceEmailResult> {
+  const customer = parseWebOrderNotes((sale as Sale & { notes?: string | null }).notes);
+  if (!customer.email) return { status: 'no_email' };
+
+  try {
+    const store = await env.DB.prepare(
+      'SELECT store_name, full_name, store_whatsapp, store_address FROM user_profiles WHERE id = ?'
+    )
+      .bind(tenantId)
+      .first<{ store_name: string | null; full_name: string | null; store_whatsapp: string | null; store_address: string | null }>();
+
+    const ids = items.map((i) => i.product_id);
+    const names = new Map<string, string>();
+    if (ids.length > 0) {
+      const { results } = await env.DB.prepare(
+        `SELECT id, name FROM products WHERE tenant_id = ? AND id IN (${ids.map(() => '?').join(',')})`
+      )
+        .bind(tenantId, ...ids)
+        .all<{ id: string; name: string }>();
+      for (const p of results) names.set(p.id, p.name);
+    }
+
+    const storeName = store?.store_name || store?.full_name || 'Tu tienda';
+    const email = buildWebOrderInvoiceEmail({
+      storeName,
+      storeWhatsapp: store?.store_whatsapp,
+      storeAddress: store?.store_address,
+      orderNumber: sale.sale_number,
+      date: new Date(),
+      customer,
+      items: items.map((i) => ({
+        name: names.get(i.product_id) ?? 'Producto',
+        quantity: i.quantity,
+        unitPrice: i.unit_price,
+        subtotal: i.subtotal,
+      })),
+      shippingCost: Number((sale as any).shipping_cost) || 0,
+      total: sale.total,
+      paymentReference: (sale as any).payment_reference ?? null,
+    });
+
+    const result = await sendEmail(
+      {
+        to: customer.email,
+        toName: customer.name ?? undefined,
+        from: 'noreply@posib.dev',
+        fromName: storeName,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+      },
+      env.RESEND_API_KEY
+    );
+    await logEmail(env.DB, tenantId, 'general', customer.email, email.subject, result.success ? 'sent' : 'failed', result.error, {
+      kind: 'web_order_invoice',
+      sale_id: sale.id,
+    }).catch(() => {});
+
+    return result.success
+      ? { status: 'sent', to: customer.email }
+      : { status: 'failed', to: customer.email, error: result.error ?? 'Error desconocido' };
+  } catch (error) {
+    console.error('[sales] No se pudo enviar la factura del pedido web:', error);
+    return { status: 'failed', to: customer.email, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 // PUT /api/sales/:id - Update sale (mainly for confirming web orders)
 app.put('/:id', async (c) => {
   const tenant: Tenant = c.get('tenant');
@@ -628,9 +703,16 @@ app.put('/:id', async (c) => {
     const updatedSale = await tenantDB.getById<Sale>('sales', saleId);
     const items = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
 
-    return c.json<APIResponse<Sale & { items: SaleItem[] }>>({
+    // Pedido web recién pagado: la factura le llega sola al cliente por correo
+    // (si lo dejó). Un fallo del correo no deshace la confirmación del pago.
+    let invoiceEmail: InvoiceEmailResult | undefined;
+    if (isWebOrder && isConfirmingPayment && updatedSale) {
+      invoiceEmail = await sendWebOrderInvoice(c.env, tenant.id, updatedSale, items);
+    }
+
+    return c.json<APIResponse<Sale & { items: SaleItem[]; invoice_email?: InvoiceEmailResult }>>({
       success: true,
-      data: { ...updatedSale!, items },
+      data: { ...updatedSale!, items, ...(invoiceEmail ? { invoice_email: invoiceEmail } : {}) },
       message: 'Sale updated successfully',
     });
   } catch (error: any) {

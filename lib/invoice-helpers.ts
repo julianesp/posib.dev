@@ -184,7 +184,58 @@ function drawTicket(doc: jsPDF, data: InvoiceData, widthMm: number): number {
 }
 
 /**
- * Genera un PDF de la factura en el formato elegido (carta por defecto)
+ * ¿La venta ya está pagada? Solo entonces la factura lleva el sello PAGADA.
+ * Un pedido web sin confirmar (status 'pendiente') o un fiado con saldo
+ * (payment_status 'pendiente' / 'parcial') no lo llevan.
+ */
+export function isSalePaid(sale: Pick<Sale, 'status' | 'payment_method' | 'payment_status'>): boolean {
+  if (sale.payment_status === 'pagado') return true;
+  if (sale.payment_status === 'pendiente' || sale.payment_status === 'parcial') return false;
+  return sale.status === 'completada' && sale.payment_method !== 'credito';
+}
+
+/**
+ * Sello "PAGADA" en rojo, en diagonal y semitransparente sobre cada página,
+ * para que el contenido siga leyéndose debajo.
+ */
+function drawPaidWatermark(doc: jsPDF) {
+  const pages = doc.getNumberOfPages();
+  for (let page = 1; page <= pages; page++) {
+    doc.setPage(page);
+    const width = doc.internal.pageSize.getWidth();
+    const height = doc.internal.pageSize.getHeight();
+    // jsPDF no centra el texto girado: se calcula a mano. La palabra ocupa el
+    // 85 % del ancho en diagonal (35°) y su centro cae en el centro de la hoja
+    // (en las tiras largas, en el primer tramo, donde están los productos).
+    const angle = 35;
+    const rad = (angle * Math.PI) / 180;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(100);
+    const widthAt100 = doc.getTextWidth('PAGADA');
+    const textWidth = (width * 0.85) / Math.cos(rad);
+    const fontSize = (100 * textWidth) / widthAt100;
+    const capHeight = fontSize * 0.3528 * 0.7; // pt → mm, alto de mayúsculas aprox.
+    const cx = width / 2;
+    const cy = Math.min(height / 2, width * 1.2);
+    // Punto de inicio: medio texto hacia atrás sobre la diagonal, y medio alto
+    // de letra hacia abajo para centrar también en vertical.
+    const x = cx - (textWidth / 2) * Math.cos(rad) + (capHeight / 2) * Math.sin(rad);
+    const y = cy + (textWidth / 2) * Math.sin(rad) + (capHeight / 2) * Math.cos(rad);
+    doc.saveGraphicsState();
+    // GState viene en la instancia (jspdf se carga diferido, sin import de valor).
+    const GState = (doc as unknown as { GState: new (opts: { opacity: number }) => Parameters<jsPDF['setGState']>[0] }).GState;
+    doc.setGState(new GState({ opacity: 0.22 }));
+    doc.setTextColor(220, 38, 38);
+    doc.setFontSize(fontSize);
+    doc.text('PAGADA', x, y, { angle });
+    doc.restoreGraphicsState();
+  }
+  doc.setTextColor(0, 0, 0);
+}
+
+/**
+ * Genera un PDF de la factura en el formato elegido (carta por defecto).
+ * Si la venta está pagada lleva el sello PAGADA (ver isSalePaid).
  */
 export async function generateInvoicePDF(
   data: InvoiceData,
@@ -202,6 +253,7 @@ export async function generateInvoicePDF(
     const height = drawTicket(draft, data, ticketWidth);
     const ticket = new jsPDF({ unit: 'mm', format: [ticketWidth, Math.max(height, ticketWidth + 1)] });
     drawTicket(ticket, data, ticketWidth);
+    if (isSalePaid(sale)) drawPaidWatermark(ticket);
     return ticket;
   }
 
@@ -394,7 +446,7 @@ export async function generateInvoicePDF(
   }
 
   if (sale.shipping_cost && sale.shipping_cost > 0) {
-    doc.text('Envío a domicilio:', pageWidth - margin - 60, yPos);
+    doc.text('Envío:', pageWidth - margin - 60, yPos);
     doc.text(formatCurrency(sale.shipping_cost), pageWidth - margin - 25, yPos, { align: 'right' });
     yPos += 6;
   }
@@ -482,6 +534,7 @@ export async function generateInvoicePDF(
   yPos += 3;
   doc.text(format(new Date(), 'dd/MM/yyyy HH:mm:ss'), pageWidth / 2, yPos, { align: 'center' });
 
+  if (isSalePaid(sale)) drawPaidWatermark(doc);
   return doc;
 }
 

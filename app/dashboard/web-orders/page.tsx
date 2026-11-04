@@ -4,7 +4,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { getSales, updateSale, deleteSale, getUserProfile } from '@/lib/cloudflare-api';
-import { Sale, UserProfile } from '@/lib/types';
+import { Sale, SaleItemWithProduct, UserProfile } from '@/lib/types';
+import { InvoiceModal } from '@/components/sales/invoice-modal';
+
+type InvoiceEmailResult =
+  | { status: 'sent'; to: string }
+  | { status: 'no_email' }
+  | { status: 'failed'; to: string; error: string };
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,6 +112,8 @@ export default function WebOrdersPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [activeTab, setActiveTab] = useState('pendiente');
+  // Factura del pedido recién confirmado, para enviarla por WhatsApp.
+  const [invoiceOrder, setInvoiceOrder] = useState<WebOrder | null>(null);
 
   useEffect(() => {
     checkAccessAndLoadOrders();
@@ -246,21 +254,38 @@ export default function WebOrdersPage() {
         : undefined;
 
     try {
-      await updateSale(orderId, {
+      const updated = (await updateSale(orderId, {
         status: 'completada',
         payment_status: 'pagado',
         amount_paid: order.total,
         amount_pending: 0,
         ...(typedReference ? { payment_reference: typedReference } : {}),
-      } as Partial<Sale>, getToken);
+      } as Partial<Sale>, getToken)) as Sale & { invoice_email?: InvoiceEmailResult };
 
-      await Swal.fire({
+      // La factura (con sello PAGADA) le llega sola al cliente si dejó correo;
+      // por WhatsApp se envía con un toque, porque el teléfono siempre está.
+      const mail = updated.invoice_email;
+      const phone = order ? extractCustomerInfo(order.notes || '').phone : undefined;
+      const mailText =
+        mail?.status === 'sent'
+          ? `📧 La factura se envió a <strong>${escapeHtml(mail.to)}</strong>.`
+          : mail?.status === 'failed'
+            ? `⚠️ No se pudo enviar la factura a ${escapeHtml(mail.to)}. Envíala por WhatsApp.`
+            : 'El cliente no dejó correo: envíale la factura por WhatsApp.';
+
+      const done = await Swal.fire({
         title: '¡Pago confirmado!',
-        text: 'El stock se actualizó y la factura pagada ya está disponible en Ventas',
+        html: `<p>El stock se actualizó y la factura quedó con el sello <strong style="color:#dc2626">PAGADA</strong>.</p><p style="margin-top:10px">${mailText}</p>`,
         icon: 'success',
+        showCancelButton: !!phone,
+        confirmButtonText: phone ? 'Enviar factura por WhatsApp' : 'Listo',
+        cancelButtonText: 'Listo',
         confirmButtonColor: '#16a34a',
-        timer: 2500,
       });
+
+      if (done.isConfirmed && phone && order) {
+        setInvoiceOrder({ ...order, ...updated, items: order.items });
+      }
 
       loadOrders();
     } catch (error) {
@@ -843,6 +868,18 @@ export default function WebOrdersPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Factura del pedido confirmado: imprimir, descargar o enviar por WhatsApp */}
+      {invoiceOrder && profile && (
+        <InvoiceModal
+          open
+          onOpenChange={(open) => !open && setInvoiceOrder(null)}
+          sale={invoiceOrder}
+          saleItems={(invoiceOrder.items ?? []) as unknown as SaleItemWithProduct[]}
+          storeInfo={profile}
+          defaultPhone={extractCustomerInfo(invoiceOrder.notes || '').phone}
+        />
+      )}
     </div>
   );
 }
