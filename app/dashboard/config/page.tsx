@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import Link from "next/link";
-import Image from "next/image";
+import { SupportWhatsAppButton } from "@/components/help/SupportWhatsAppButton";
 import {
   Card,
   CardContent,
@@ -213,22 +212,8 @@ export default function ConfigPage() {
 
   return (
     <div className="space-y-6">
-      {/* Botón de WhatsApp flotante */}
-      <Link
-        href="https://wa.me/573174503604?text=Hola,%20tengo%20una%20pregunta%20sobre%20mi%20configuración"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-[10px] right-6 z-50 transition-transform hover:scale-110"
-        aria-label="Contactar por WhatsApp"
-      >
-        <Image
-          src="https://pub-c0883d14d3e84a69bf84546fa108aa0b.r2.dev/socialmedia/social%20(1).png"
-          alt="WhatsApp"
-          className="w-14 h-14 md:w-16 md:h-16 drop-shadow-lg"
-          width={50}
-          height={50}
-        />
-      </Link>
+      {/* Soporte por WhatsApp: abajo a la izquierda (a la derecha está el acceso a la tienda) */}
+      <SupportWhatsAppButton message="Hola, tengo una pregunta sobre mi configuración" />
 
       {/* Header */}
       <div className="flex items-center justify-between">

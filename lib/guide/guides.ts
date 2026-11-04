@@ -425,6 +425,11 @@ export const GUIDES: Guide[] = [
     sceneId: "tienda",
     steps: [
       {
+        title: "Mira qué te falta",
+        text: "Este anillo muestra cuánto está lista tu tienda. Toca cada paso pendiente y te lleva directo.",
+        target: "store-readiness",
+      },
+      {
         title: "Actívala",
         text: "Enciende la tienda para que tus clientes la vean en internet.",
         target: "store-status",

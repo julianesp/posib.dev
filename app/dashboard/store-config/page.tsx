@@ -37,6 +37,7 @@ import {
   getStorefrontBlockMessage,
 } from "@/lib/storefront-access";
 import { StorefrontUserStats } from "@/components/store/storefront-user-stats";
+import { StoreReadinessGuide } from "@/components/store-config/store-readiness-guide";
 import Swal from "sweetalert2";
 
 const StoreQRGenerator = dynamic(
@@ -331,6 +332,18 @@ export default function StoreConfigPage() {
           </Button>
         </div>
       </div>
+
+      {/* Guía con avance: qué falta para vender, con gráficas animadas */}
+      <StoreReadinessGuide
+        storeEnabled={storeEnabled}
+        storeName={storeName}
+        storeSlug={storeSlug}
+        storeWhatsapp={storeWhatsapp}
+        storeNequiNumber={storeNequiNumber}
+        paymentQrUrl={paymentQrUrl}
+        storeShippingEnabled={storeShippingEnabled}
+        storePickupEnabled={storePickupEnabled}
+      />
 
       {/* Estado de la tienda */}
       <Card data-guide="store-status">

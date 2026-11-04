@@ -601,6 +601,16 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       : []),
   ];
 
+  // Ancho actual del menú como variable CSS (--sidebar-w) para que los botones
+  // flotantes de la izquierda (p. ej. WhatsApp de soporte) queden junto a él.
+  useEffect(() => {
+    if (isMobile) return;
+    document.documentElement.style.setProperty(
+      "--sidebar-w",
+      `${isCollapsed ? COLLAPSED_WIDTH : sidebarWidth}px`,
+    );
+  }, [isMobile, isCollapsed, sidebarWidth]);
+
   // Mostrar sidebar en pantallas >= 768px (md breakpoint)
   const sidebarClasses = isMobile
     ? "flex w-full md:w-64 flex-col bg-[var(--shell-rail)] text-gray-700 h-full shadow-2xl"
