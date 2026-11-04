@@ -231,9 +231,8 @@ export function StoreReadinessGuide(props: Omit<StoreReadinessInput, "products">
       {idleZones > 0 && (
         <div role="alert" className="mt-5 flex flex-col gap-3 rounded-xl border-2 border-brand/50 bg-brand-light p-4 sm:flex-row sm:items-center">
           <p className="flex-1 text-sm text-gray-900">
-            <strong>Tus clientes no pueden pedir domicilio.</strong> Tienes {idleZones} zona
-            {idleZones === 1 ? "" : "s"} de envío, pero el envío a domicilio está apagado: actívalo en
-            &quot;Entregas&quot; y guarda.
+            <strong>Tus clientes no pueden pedir domicilio.</strong>{" "}
+            {`Tienes ${idleZones} ${idleZones === 1 ? "zona" : "zonas"} de envío, pero el envío a domicilio está apagado: actívalo en "Entregas" y guarda.`}
           </p>
           <Button size="sm" onClick={() => goToSection("store-delivery")} className="shrink-0 cursor-pointer">
             Activar domicilio

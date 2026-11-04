@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
@@ -23,7 +23,6 @@ import {
   Palette,
   Share2,
   MapPin,
-  Eye,
   Plus,
   Trash2,
   ImageIcon,
@@ -161,6 +160,7 @@ export default function StoreConfigPage() {
       setStorePickupEnabled(data.store_pickup_enabled !== false);
       setStoreMinOrder(data.store_min_order ?? DEFAULT_MIN_ORDER);
       setStoreTerms(data.store_terms || "");
+      setNeedsBaseline(true);
     } catch (error) {
       console.error("Error loading profile:", error);
       toast.error("Error al cargar configuración");
@@ -206,23 +206,108 @@ export default function StoreConfigPage() {
     setStoreBannerImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
-    if (!profile) return;
+  // Lo que se guarda (y con lo que se detectan cambios sin guardar).
+  const buildPayload = () => ({
+    store_slug: storeSlug.toLowerCase().trim() || undefined,
+    store_name: storeName.trim() || undefined,
+    store_description: storeDescription.trim() || undefined,
+    store_enabled: storeEnabled,
+    store_primary_color: storePrimaryColor,
+    store_secondary_color: storeSecondaryColor,
+    store_logo_url: storeLogoUrl.trim() || undefined,
+    store_banner_url: storeBannerUrl.trim() || undefined,
+    store_banner_images:
+      storeBannerImages.length > 0
+        ? JSON.stringify(storeBannerImages)
+        : undefined,
+    store_whatsapp: storeWhatsapp.trim() || undefined,
+    store_facebook: storeFacebook.trim() || undefined,
+    store_instagram: storeInstagram.trim() || undefined,
+    store_address: storeAddress.trim() || undefined,
+    store_city: storeCity.trim() || undefined,
+    store_phone: storePhone.trim() || undefined,
+    store_email: storeEmail.trim() || undefined,
+    store_nequi_number: storeNequiNumber.trim() || undefined,
+    payment_qr_url: paymentQrUrl || undefined,
+    store_maps_url: storeMapsUrl.trim() || undefined,
+    store_shipping_enabled: storeShippingEnabled,
+    store_pickup_enabled: storePickupEnabled,
+    store_min_order: storeMinOrder,
+    store_terms: storeTerms.trim() || undefined,
+  });
+
+  // "Foto" de lo guardado: Guardar solo se habilita si algo cambió.
+  const currentSnapshot = JSON.stringify(buildPayload());
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+  const [needsBaseline, setNeedsBaseline] = useState(false);
+  if (needsBaseline && !loading) {
+    setNeedsBaseline(false);
+    setSavedSnapshot(currentSnapshot);
+  }
+  const isDirty = savedSnapshot !== null && currentSnapshot !== savedSnapshot;
+
+  // Cambios sin guardar: aviso al cerrar o recargar la pestaña…
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
+
+  // …y al ir a otra pantalla del sistema desde un enlace (menú, atajos).
+  const saveRef = useRef<() => Promise<boolean>>(async () => false);
+  useEffect(() => {
+    if (!isDirty) return;
+    const onClick = async (e: MouseEvent) => {
+      const link = (e.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link || link.target === "_blank" || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const answer = await Swal.fire({
+        title: "Tienes cambios sin guardar",
+        text: "Si sales ahora, los cambios de tu tienda se pierden.",
+        icon: "warning",
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: "Guardar y salir",
+        denyButtonText: "Salir sin guardar",
+        cancelButtonText: "Seguir editando",
+        confirmButtonColor: "#16a34a",
+        denyButtonColor: "#6b7280",
+      });
+      if (answer.isConfirmed) {
+        if (await saveRef.current()) router.push(url.pathname + url.search);
+      } else if (answer.isDenied) {
+        setSavedSnapshot(null); // ya no hay nada que proteger
+        router.push(url.pathname + url.search);
+      }
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [isDirty, router]);
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!profile) return false;
 
     // Validaciones
     if (storeEnabled) {
       if (!storeSlug.trim()) {
         toast.error("El slug de la tienda es requerido");
-        return;
+        return false;
       }
       if (!storeName.trim()) {
         toast.error("El nombre de la tienda es requerido");
-        return;
+        return false;
       }
       if (!hasValidNequiNumber(storeNequiNumber)) {
         toast.error("Para activar la tienda escribe tu número de Nequi (10 dígitos): ahí te pagan los clientes.");
         document.querySelector('[data-guide="store-contact"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
+        return false;
       }
 
       // Validar formato del slug (solo letras, números y guiones)
@@ -231,7 +316,7 @@ export default function StoreConfigPage() {
         toast.error(
           "El slug solo puede contener letras minúsculas, números y guiones",
         );
-        return;
+        return false;
       }
     }
 
@@ -241,53 +326,29 @@ export default function StoreConfigPage() {
       toast.error(
         `El pedido mínimo no puede ser menor a $${DEFAULT_MIN_ORDER.toLocaleString("es-CO")} COP`,
       );
-      return;
+      return false;
     }
 
     setSaving(true);
     try {
-      await updateUserProfile(
-        profile.id,
-        {
-          store_slug: storeSlug.toLowerCase().trim() || undefined,
-          store_name: storeName.trim() || undefined,
-          store_description: storeDescription.trim() || undefined,
-          store_enabled: storeEnabled,
-          store_primary_color: storePrimaryColor,
-          store_secondary_color: storeSecondaryColor,
-          store_logo_url: storeLogoUrl.trim() || undefined,
-          store_banner_url: storeBannerUrl.trim() || undefined,
-          store_banner_images:
-            storeBannerImages.length > 0
-              ? JSON.stringify(storeBannerImages)
-              : undefined,
-          store_whatsapp: storeWhatsapp.trim() || undefined,
-          store_facebook: storeFacebook.trim() || undefined,
-          store_instagram: storeInstagram.trim() || undefined,
-          store_address: storeAddress.trim() || undefined,
-          store_city: storeCity.trim() || undefined,
-          store_phone: storePhone.trim() || undefined,
-          store_email: storeEmail.trim() || undefined,
-          store_nequi_number: storeNequiNumber.trim() || undefined,
-          payment_qr_url: paymentQrUrl || undefined,
-          store_maps_url: storeMapsUrl.trim() || undefined,
-          store_shipping_enabled: storeShippingEnabled,
-          store_pickup_enabled: storePickupEnabled,
-          store_min_order: storeMinOrder,
-          store_terms: storeTerms.trim() || undefined,
-        },
-        getToken,
-      );
+      await updateUserProfile(profile.id, buildPayload(), getToken);
 
       toast.success("Configuración guardada exitosamente");
+      setSavedSnapshot(currentSnapshot);
       loadProfile(); // Recargar para obtener datos actualizados
+      return true;
     } catch (error) {
       console.error("Error saving config:", error);
       toast.error(error instanceof Error ? error.message : "Error al guardar configuración");
+      return false;
     } finally {
       setSaving(false);
     }
   };
+  // El aviso de "cambios sin guardar" llama siempre al guardado más reciente.
+  useEffect(() => {
+    saveRef.current = handleSave;
+  });
 
   const getStoreUrl = () => {
     if (!storeSlug) return null;
@@ -315,28 +376,54 @@ export default function StoreConfigPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Tienda Online</h1>
-          <p className="text-gray-500">
-            Configura tu tienda para vender por internet
-          </p>
-        </div>
-        <div data-guide="store-save" className="fixed top-[130px] right-6 z-40 flex flex-col items-center gap-2">
+    <div>
+      {/* Tienda + Guardar: justo debajo de la bandeja del perfil (clear-right la
+          deja bajo la bandeja flotante en escritorio) y fijos al bajar. Guardar
+          solo se activa, en el color de la tienda, cuando hay cambios. */}
+      <div
+        data-guide="store-save"
+        className="pointer-events-none sticky top-2 z-30 clear-right mb-3 flex justify-end"
+      >
+        <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-[var(--shell-line)] bg-white/95 p-1.5 shadow-md backdrop-blur">
           {storeEnabled && storeSlug && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => window.open(getStoreUrl()!, "_blank")}
+              className="cursor-pointer"
+              title="Ver mi tienda como la ven los clientes"
             >
-              <Eye className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Vista Previa</span>
+              <Store className="mr-1.5 h-4 w-4" />
+              Tienda
             </Button>
           )}
-          <Button onClick={handleSave} disabled={saving}>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!isDirty || saving}
+            aria-label={isDirty ? "Guardar cambios" : "Sin cambios por guardar"}
+            className={`cursor-pointer ${
+              isDirty
+                ? "bg-brand text-white shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_25%,transparent)] hover:bg-brand-hover"
+                : ""
+            }`}
+          >
             {saving ? "Guardando..." : "Guardar"}
           </Button>
         </div>
+      </div>
+
+    <div className="space-y-6 max-w-4xl">
+      <div>
+        <h1 className="text-3xl font-bold">Tienda Online</h1>
+        <p className="text-gray-500">
+          Configura tu tienda para vender por internet
+        </p>
+        {isDirty && (
+          <p role="status" className="mt-2 text-sm font-medium text-brand">
+            Tienes cambios sin guardar. Toca Guardar para que se vean en tu tienda.
+          </p>
+        )}
       </div>
 
       {/* Guía con avance: qué falta para vender, con gráficas animadas */}
@@ -836,6 +923,7 @@ export default function StoreConfigPage() {
 
       {/* Zonas de Envío */}
       <ShippingZonesManager />
+    </div>
     </div>
   );
 }
