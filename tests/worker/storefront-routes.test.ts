@@ -358,6 +358,38 @@ describe('tienda online pública', () => {
     });
   });
 
+  describe('Nequi obligatorio', () => {
+    it('una tienda sin número de Nequi no recibe pedidos (el cliente no tendría a dónde pagar)', async () => {
+      store('t_sin_nequi', 'sin-nequi', { store_nequi_number: null });
+      product('Pan', 't_sin_nequi');
+      const res = await post('/orders/sin-nequi', {
+        customer_name: 'Marta', customer_phone: '3109876543', delivery_method: 'pickup', items: [{ product_id: 'Pan', quantity: 1 }],
+      });
+      expect(res.status).toBe(400);
+      expect(res.json.code).toBe('STORE_NEQUI_REQUIRED');
+      expect(db.sqlite.prepare(`SELECT COUNT(*) AS n FROM sales WHERE tenant_id = 't_sin_nequi'`).get()).toMatchObject({ n: 0 });
+    });
+
+    it('un número incompleto tampoco sirve', async () => {
+      store('t_corto', 'corto', { store_nequi_number: '317450' });
+      product('Pan', 't_corto');
+      const res = await post('/orders/corto', {
+        customer_name: 'Marta', customer_phone: '3109876543', delivery_method: 'pickup', items: [{ product_id: 'Pan', quantity: 1 }],
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('pago con Wompi desde la tienda', () => {
+    // Descartado: tomaba el monto del navegador y el webhook lo daba por pagado.
+    it('está desactivado', async () => {
+      global.fetch = jest.fn() as typeof fetch;
+      const res = await post('/wompi/create-payment-link/barrio', { order_id: 'x', order_number: 'y', amount_in_cents: 200000 });
+      expect(res.status).toBe(410);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+  });
+
   describe('pago con ePayco desde la tienda', () => {
     // Desactivado: el monto lo mandaba el navegador (se podía pagar menos).
     it('está desactivado y no llama a ePayco aunque la tienda tenga llaves', async () => {

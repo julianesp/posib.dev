@@ -5,6 +5,15 @@
  * (atributo data-guide) a la que lleva el botón "Ir".
  */
 
+/**
+ * Número de Nequi (o cuenta) válido: al menos 10 dígitos. Es requisito para
+ * encender la tienda; misma regla que hasValidNequiNumber() del Worker
+ * (utils/storefront-access.ts), que rechaza encenderla o recibir pedidos sin él.
+ */
+export function hasValidNequiNumber(value: string | null | undefined): boolean {
+  return (value ?? '').replace(/\D/g, '').length >= 10;
+}
+
 export interface StoreReadinessInput {
   storeEnabled: boolean;
   storeName: string;
@@ -82,8 +91,8 @@ export function storeReadiness(input: StoreReadinessInput): {
     {
       id: 'nequi',
       title: 'Número de Nequi',
-      hint: 'A este número te pagan los clientes.',
-      done: input.storeNequiNumber.replace(/\D/g, '').length >= 10,
+      hint: 'Obligatorio para activar la tienda: a este número te pagan los clientes.',
+      done: hasValidNequiNumber(input.storeNequiNumber),
       required: true,
       target: 'store-contact',
     },
@@ -139,4 +148,16 @@ export function storeReadiness(input: StoreReadinessInput): {
     percent: Math.round((done / steps.length) * 100),
     canSell: steps.every((s) => s.done || !s.required),
   };
+}
+
+/**
+ * Zonas de envío creadas pero el domicilio apagado: el cliente no puede elegir
+ * domicilio en el checkout. Devuelve cuántas zonas activas quedan sin uso.
+ */
+export function idleShippingZones(
+  zones: { is_active?: boolean | number | null }[] | null,
+  shippingEnabled: boolean
+): number {
+  if (shippingEnabled || !zones) return 0;
+  return zones.filter((z) => Number(z.is_active ?? 1) === 1).length;
 }

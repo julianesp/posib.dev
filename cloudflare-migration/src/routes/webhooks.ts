@@ -8,35 +8,42 @@ import type { Env, APIResponse, AppEnv } from '../types';
 
 const app = new Hono<AppEnv>();
 
-// GET /api/webhooks/wompi/config - Debug endpoint para verificar configuración
-app.get('/wompi/config', async (c) => {
-  try {
-    return c.json<APIResponse>({
-      success: true,
-      data: {
-        webhook_url: 'https://tienda-pos-api.julian-mendieta24.workers.dev/api/webhooks/wompi',
-        expected_secret: c.env.WOMPI_EVENTS_SECRET || 'prod_events_QqwC3D3DQxyCyvjMo1O4VFRIT6DaJ2ZZ',
-        wompi_public_key: c.env.WOMPI_PUBLIC_KEY ? 'configurada' : 'NO configurada',
-        wompi_private_key: c.env.WOMPI_PRIVATE_KEY ? 'configurada' : 'NO configurada',
-        instructions: 'Configure este webhook URL en Wompi Dashboard: Settings > API Keys > Eventos',
-      },
-    });
-  } catch (error: any) {
-    return c.json<APIResponse>({
-      success: false,
-      error: error.message,
-    }, 500);
-  }
-});
+// (Se quitó GET /wompi/config: devolvía en público el secreto de eventos.)
+
+/**
+ * Lo que dice WOMPI de una transacción, consultado a su API: el cuerpo del
+ * webhook no se usa como prueba de pago (cualquiera con el secreto podía
+ * fingir un "APPROVED" y activarse un plan). null si Wompi no la conoce.
+ */
+export async function fetchWompiTransaction(
+  transactionId: string,
+  env: { WOMPI_PUBLIC_KEY?: string }
+): Promise<{ id: string; status: string; amount_in_cents: number; reference: string; payment_method_type?: string } | null> {
+  if (!transactionId || !/^[\w-]+$/.test(transactionId)) return null;
+  const res = await fetch(`https://production.wompi.co/v1/transactions/${encodeURIComponent(transactionId)}`, {
+    headers: env.WOMPI_PUBLIC_KEY ? { Authorization: `Bearer ${env.WOMPI_PUBLIC_KEY}` } : {},
+  });
+  if (!res.ok) return null;
+  const body = (await res.json().catch(() => null)) as { data?: Record<string, unknown> } | null;
+  const t = body?.data;
+  if (!t || typeof t.id !== 'string' || typeof t.status !== 'string' || typeof t.reference !== 'string') return null;
+  return {
+    id: t.id,
+    status: t.status,
+    amount_in_cents: Number(t.amount_in_cents) || 0,
+    reference: t.reference,
+    payment_method_type: typeof t.payment_method_type === 'string' ? t.payment_method_type : undefined,
+  };
+}
 
 // POST /api/webhooks/wompi - Procesar webhook de Wompi
 app.post('/wompi', async (c) => {
   try {
     const webhookSecret = c.req.header('X-Webhook-Secret');
-    const expectedSecret = c.env.WOMPI_EVENTS_SECRET || 'prod_events_QqwC3D3DQxyCyvjMo1O4VFRIT6DaJ2ZZ';
+    const expectedSecret = c.env.WOMPI_EVENTS_SECRET;
 
-    // Verificar el secret del webhook
-    if (webhookSecret !== expectedSecret) {
+    // Verificar el secret del webhook (sin valor por defecto en el código)
+    if (!expectedSecret || webhookSecret !== expectedSecret) {
       console.error('❌ Invalid webhook secret');
       return c.json<APIResponse>({
         success: false,
@@ -74,135 +81,26 @@ app.post('/wompi', async (c) => {
 
     // Procesar según el tipo de evento
     if (event.event === 'transaction.updated') {
-      const transaction = event.data.transaction;
-      const { id, status, reference, amount_in_cents, payment_method_type, payment_link_id } = transaction;
+      const transaction = event.data?.transaction ?? {};
+      const payment_link_id = transaction.payment_link_id;
+
+      // Pedidos de la tienda pagados con link de Wompi: descartado (la tienda
+      // cobra por Nequi con referencia). No se marca nada como pagado.
+      if (payment_link_id) {
+        console.warn(`⚠️ Evento de payment link ${payment_link_id} ignorado: Wompi en la tienda está desactivado`);
+        return c.json<APIResponse>({ success: true, message: 'Payment links are disabled; event ignored' });
+      }
+
+      // Estado, monto y referencia salen de la API de Wompi, no del aviso.
+      const verified = await fetchWompiTransaction(String(transaction.id ?? ''), c.env);
+      if (!verified) {
+        console.error('❌ Wompi no confirma la transacción del aviso:', transaction.id);
+        return c.json<APIResponse>({ success: false, error: 'Transaction not found in Wompi' }, 404);
+      }
+      const { id, status, reference, amount_in_cents, payment_method_type } = verified;
 
       console.log(`🔄 Processing transaction ${id} with status: ${status}`);
       console.log(`Reference: ${reference}, Payment Link ID: ${payment_link_id}`);
-
-      // Si la transacción viene de un payment link, buscar por el SKU en lugar del reference
-      if (payment_link_id) {
-        console.log(`💳 Transaction from payment link: ${payment_link_id}`);
-
-        // Obtener información del payment link para obtener el SKU (order_id)
-        const paymentLink = event.data.payment_link;
-        const sku = paymentLink?.sku;
-
-        if (!sku) {
-          console.error('❌ Payment link has no SKU');
-          return c.json<APIResponse>({
-            success: false,
-            error: 'Payment link has no SKU',
-          }, 400);
-        }
-
-        console.log(`🛒 Processing web order with SKU: ${sku}`);
-
-        // Buscar la venta por ID (el SKU contiene el order_id)
-        const sale = await c.env.DB.prepare(
-          `SELECT id, tenant_id, total, status, sale_number FROM sales WHERE id = ?`
-        ).bind(sku).first<{
-          id: string;
-          tenant_id: string;
-          total: number;
-          status: string;
-          sale_number: string;
-        }>();
-
-        if (!sale) {
-          console.error('❌ Sale not found for SKU:', sku);
-          return c.json<APIResponse>({
-            success: false,
-            error: 'Sale not found',
-          }, 404);
-        }
-
-        console.log(`✅ Found sale: ${sale.id} (${sale.status})`);
-
-        // Si el pago fue aprobado, actualizar la venta a completada
-        if (status === 'APPROVED') {
-          const now = new Date().toISOString();
-
-          // Actualizar estado de la venta
-          await c.env.DB.prepare(
-            `UPDATE sales
-             SET status = 'completada',
-                 payment_status = 'pagado',
-                 amount_paid = ?,
-                 amount_pending = 0,
-                 notes = COALESCE(notes, '') || ?
-             WHERE id = ? AND tenant_id = ?`
-          ).bind(
-            sale.total,
-            `\nPago confirmado vía Wompi: ${id}\nMétodo: ${payment_method_type || 'desconocido'}\nFecha: ${now}`,
-            sale.id,
-            sale.tenant_id
-          ).run();
-
-          console.log(`✅ Sale ${sale.id} marked as completed and paid`);
-
-          // Descontar inventario de los productos vendidos
-          const saleItems = await c.env.DB.prepare(
-            `SELECT product_id, quantity FROM sale_items WHERE sale_id = ? AND tenant_id = ?`
-          ).bind(sale.id, sale.tenant_id).all<{ product_id: string; quantity: number }>();
-
-          for (const item of saleItems.results) {
-            await c.env.DB.prepare(
-              `UPDATE products SET stock = stock - ? WHERE id = ? AND tenant_id = ?`
-            ).bind(item.quantity, item.product_id, sale.tenant_id).run();
-          }
-
-          console.log(`✅ Inventory updated for ${saleItems.results.length} products`);
-
-          return c.json<APIResponse>({
-            success: true,
-            message: 'Web order completed and inventory updated',
-            data: {
-              saleId: sale.id,
-              orderNumber: sale.sale_number,
-              status: 'completada',
-            },
-          });
-        }
-
-        // Si el pago fue rechazado, actualizar la venta
-        if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
-          await c.env.DB.prepare(
-            `UPDATE sales
-             SET notes = COALESCE(notes, '') || ?
-             WHERE id = ? AND tenant_id = ?`
-          ).bind(
-            `\nPago rechazado/error en Wompi: ${id}\nEstado: ${status}\nFecha: ${new Date().toISOString()}`,
-            sale.id,
-            sale.tenant_id
-          ).run();
-
-          console.log(`⚠️ Sale ${sale.id} payment declined/error`);
-
-          return c.json<APIResponse>({
-            success: true,
-            message: 'Payment declined for web order',
-            data: {
-              saleId: sale.id,
-              orderNumber: sale.sale_number,
-              status: 'pendiente',
-            },
-          });
-        }
-
-        // Para estados pendientes, solo registrar
-        console.log(`⏳ Web order ${sale.sale_number} status is ${status}, waiting for completion`);
-
-        return c.json<APIResponse>({
-          success: true,
-          message: 'Transaction recorded, awaiting completion',
-          data: {
-            saleId: sale.id,
-            orderNumber: sale.sale_number,
-            transactionStatus: status,
-          },
-        });
-      }
 
       // 💳 PROCESAR SUSCRIPCIÓN O ADDON (transacciones directas, no de payment links)
       // Determinar el tipo de transacción según el reference
@@ -319,7 +217,11 @@ app.post('/wompi', async (c) => {
         }
         // Si es SUBSCRIPTION, activar el plan y/o addons
         else if (transactionType === 'SUBSCRIPTION' || transactionType === 'SUB') {
-          updateSubscriptionStatus = true;
+          // Solo un monto de plan conocido activa la suscripción (abajo).
+          updateSubscriptionStatus = [24900, 4900, 9900, 29800, 34800].includes(amountCOP);
+          if (!updateSubscriptionStatus) {
+            console.warn(`⚠️ Pago ${id} por $${amountCOP}: no coincide con ningún plan; no se activa`);
+          }
 
           // Plan básico
           if (amountCOP === 24900) {

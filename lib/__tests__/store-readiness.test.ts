@@ -1,4 +1,4 @@
-import { productVisibility, storeReadiness, type StoreReadinessInput } from '../store-readiness';
+import { hasValidNequiNumber, idleShippingZones, productVisibility, storeReadiness, type StoreReadinessInput } from '../store-readiness';
 
 const base: StoreReadinessInput = {
   storeEnabled: false,
@@ -67,5 +67,32 @@ describe('guía "¿Lista para vender?" de la tienda online', () => {
         { stock: 3, images: [] },
       ])
     ).toEqual({ ready: 3, noPhoto: 3, noStock: 1 });
+  });
+});
+
+describe('Nequi obligatorio para activar la tienda', () => {
+  it.each([
+    ['3174503604', true],
+    ['317 450 3604', true],
+    ['+57 317-450-3604', true],
+    ['12345678901', true], // cuenta bancaria
+    ['317450', false],
+    ['', false],
+    [null, false],
+    [undefined, false],
+  ])('%j → %s', (value, expected) => {
+    expect(hasValidNequiNumber(value)).toBe(expected);
+  });
+});
+
+describe('zonas de envío con el domicilio apagado', () => {
+  it('cuenta las zonas activas que el cliente no puede usar', () => {
+    expect(idleShippingZones([{ is_active: 1 }, { is_active: 0 }, { is_active: true }], false)).toBe(2);
+  });
+
+  it('no avisa si el domicilio está encendido o no hay zonas', () => {
+    expect(idleShippingZones([{ is_active: 1 }], true)).toBe(0);
+    expect(idleShippingZones([], false)).toBe(0);
+    expect(idleShippingZones(null, false)).toBe(0);
   });
 });

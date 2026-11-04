@@ -15,6 +15,7 @@ import {
   submitPaymentReference,
 } from "@/lib/storefront-api";
 import { allowedDeliveryMethods } from "@/lib/storefront-delivery";
+import { hasValidNequiNumber } from "@/lib/store-readiness";
 import { detectNequiPlatform, nequiAppLink } from "@/lib/nequi-app-link";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
@@ -795,6 +796,39 @@ export default function CheckoutPage() {
         </div>
       </header>
 
+      {/* Sin número de Nequi la tienda no recibe pagos en línea: en vez de
+          dejar hacer un pedido que no se puede pagar, se lleva al WhatsApp. */}
+      {!hasValidNequiNumber(config.store_nequi_number) ? (
+        <div className="mx-auto max-w-lg px-4 py-12">
+          <Card>
+            <CardContent className="space-y-4 pt-6 text-center">
+              <Store className="mx-auto h-12 w-12 text-gray-400" />
+              <h2 className="text-xl font-bold text-black">
+                Esta tienda todavía no recibe pagos en línea
+              </h2>
+              <p className="text-gray-700">
+                Escríbele por WhatsApp para hacer tu pedido y acordar el pago.
+              </p>
+              {config.store_whatsapp && (
+                <a
+                  href={
+                    buildWhatsAppLink(
+                      config.store_whatsapp,
+                      `Hola, quiero hacer un pedido en ${config.store_name || "tu tienda"}.`,
+                    ) ?? undefined
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                  Escribir por WhatsApp
+                </a>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit}>
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1142,6 +1176,7 @@ export default function CheckoutPage() {
           </div>
         </div>
       </form>
+      )}
     </div>
   );
 }

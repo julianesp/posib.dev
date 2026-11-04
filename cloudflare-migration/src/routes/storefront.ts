@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
-import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
+import { findActiveStore, hasValidNequiNumber, type StoreAccessRow } from '../utils/storefront-access';
 import { escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
 import { hashOrderToken, isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
 
@@ -347,11 +347,12 @@ app.post('/orders/:slug', async (c) => {
         store_min_order?: number | null;
         store_shipping_enabled?: number | null;
         store_pickup_enabled?: number | null;
+        store_nequi_number?: string | null;
       }
     >(
       c.env.DB,
       slug,
-      'store_name, store_whatsapp, epayco_enabled, telegram_chat_id, telegram_enabled, store_min_order, store_shipping_enabled, store_pickup_enabled'
+      'store_name, store_whatsapp, epayco_enabled, telegram_chat_id, telegram_enabled, store_min_order, store_shipping_enabled, store_pickup_enabled, store_nequi_number'
     );
 
     if (!store) {
@@ -362,6 +363,15 @@ app.post('/orders/:slug', async (c) => {
     }
 
     const tenantDB = new TenantDB(c.env.DB, store.id);
+
+    // Sin número de Nequi el cliente no tiene a dónde pagar: no se recibe el pedido.
+    if (!hasValidNequiNumber(store.store_nequi_number)) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Esta tienda todavía no recibe pagos en línea. Escríbele por WhatsApp para hacer tu pedido.',
+        code: 'STORE_NEQUI_REQUIRED',
+      } as APIResponse, 400);
+    }
 
     // Forma de entrega permitida por la tienda (no solo por el navegador).
     const isShipping = body.delivery_method !== 'pickup';
@@ -744,117 +754,16 @@ app.get('/shipping-zones/:slug', async (c) => {
   }
 });
 
-// POST /api/storefront/wompi/create-payment-link/:slug - Crear payment link de Wompi (público)
-app.post('/wompi/create-payment-link/:slug', async (c) => {
-  const slug = c.req.param('slug');
-
-  try {
-    const body = await c.req.json();
-    const { order_id, order_number, amount_in_cents, customer_email, customer_name } = body;
-
-    if (!order_id || !order_number || !amount_in_cents) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Missing required fields: order_id, order_number, amount_in_cents',
-      }, 400);
-    }
-
-    // Verificar que la tienda existe, está activa y tiene Wompi habilitado
-    const store = await findActiveStore<
-      StoreAccessRow & { wompi_public_key?: string; wompi_private_key?: string; wompi_enabled: number }
-    >(c.env.DB, slug, 'wompi_public_key, wompi_private_key, wompi_enabled');
-
-    if (!store) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Store not found or disabled',
-      }, 404);
-    }
-
-    if (!store.wompi_enabled) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Wompi payments not enabled for this store',
-      }, 400);
-    }
-
-    if (!store.wompi_private_key) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Wompi credentials not configured',
-      }, 400);
-    }
-
-    // Validar monto mínimo (2,000 COP = 200,000 centavos)
-    if (amount_in_cents < 200000) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'El monto mínimo para pagos con Wompi es de $2,000 COP',
-      }, 400);
-    }
-
-    // Construir redirect_url para después del pago
-    // Wompi redirigirá aquí después de que el cliente complete el pago
-    const redirectUrl = `https://posib.dev/store/${slug}/payment-confirmation`;
-
-    // Crear el payment link en Wompi
-    const wompiResponse = await fetch('https://production.wompi.co/v1/payment_links', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${store.wompi_private_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: `Pedido ${order_number}`,
-        description: `Pago del pedido ${order_number}${customer_name ? ` - ${customer_name}` : ''}`,
-        single_use: true,
-        collect_shipping: false,
-        currency: 'COP',
-        amount_in_cents: amount_in_cents,
-        reference: order_number, // CLAVE: Usar order_number como referencia para identificar en webhook
-        sku: order_id,
-        redirect_url: redirectUrl,
-      }),
-    });
-
-    if (!wompiResponse.ok) {
-      const errorData = (await wompiResponse.json().catch(() => ({}))) as any;
-      console.error('Wompi API error:', errorData);
-      return c.json<APIResponse>({
-        success: false,
-        error: errorData.error?.reason || 'Error al crear el link de pago en Wompi',
-      }, 500);
-    }
-
-    const wompiData = (await wompiResponse.json()) as any;
-    const checkoutUrl = `https://checkout.wompi.co/l/${wompiData.data.id}`;
-
-    // Guardar referencia del payment link en las notas del pedido
-    await c.env.DB.prepare(
-      `UPDATE sales
-       SET notes = COALESCE(notes, '') || '\nWompi Payment Link ID: ' || ?
-       WHERE id = ? AND tenant_id = ?`
-    )
-      .bind(wompiData.data.id, order_id, store.id)
-      .run();
-
-    return c.json<APIResponse>({
-      success: true,
-      data: {
-        payment_link_id: wompiData.data.id,
-        checkout_url: checkoutUrl,
-        expires_at: wompiData.data.expires_at,
-      },
-    });
-
-  } catch (error: any) {
-    console.error('Error creating Wompi payment link:', error);
-    return c.json<APIResponse>({
-      success: false,
-      error: error.message || 'Failed to create payment link',
-    }, 500);
-  }
-});
+// POST /api/storefront/wompi/create-payment-link/:slug
+// DESACTIVADA (410): tomaba el monto del navegador sin compararlo con el total
+// del pedido y el webhook de Wompi lo daba por pagado. La tienda cobra por
+// Nequi con referencia; Wompi en la tienda quedó descartado (2026-11-04).
+app.post('/wompi/create-payment-link/:slug', (c) =>
+  c.json<APIResponse>(
+    { success: false, error: 'El pago con Wompi desde la tienda no está disponible. Paga por Nequi.' },
+    410
+  )
+);
 
 // POST /api/storefront/auth/register/:slug - Registrar usuario en tienda
 app.post('/auth/register/:slug', async (c) => {

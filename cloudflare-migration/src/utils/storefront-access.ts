@@ -61,3 +61,14 @@ export async function findActiveStore<T extends StoreAccessRow = StoreAccessRow>
 
   return store;
 }
+
+/**
+ * Número de Nequi (o cuenta) válido para cobrar en la tienda: al menos 10
+ * dígitos (un celular colombiano). Es requisito para encender la tienda y para
+ * recibir pedidos: sin él el cliente no tiene a dónde pagar.
+ */
+export function hasValidNequiNumber(value: unknown): boolean {
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value).replace(/\D/g, '').length >= 10
+    : false;
+}

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { hasValidNequiNumber } from '../utils/storefront-access';
 import type { Env, APIResponse, Tenant, AppEnv } from '../types';
 import type { UserProfile } from '../../../lib/types';
 
@@ -170,6 +171,21 @@ app.put('/:id', async (c) => {
         error: 'Unauthorized - Solo puedes actualizar tu propio perfil o ser superadmin',
         data: null
       }, 403);
+    }
+
+    // La tienda online solo se enciende con un número de Nequi: sin él el
+    // cliente hace el pedido y no tiene a dónde pagar.
+    const turnsStoreOn = body.store_enabled === true || body.store_enabled === 1;
+    if (turnsStoreOn) {
+      const nequi = body.store_nequi_number !== undefined ? body.store_nequi_number : currentProfile.store_nequi_number;
+      if (!hasValidNequiNumber(nequi)) {
+        return c.json<APIResponse<null>>({
+          success: false,
+          error: 'Para activar la tienda online escribe tu número de Nequi (10 dígitos): ahí te pagan los clientes.',
+          code: 'STORE_NEQUI_REQUIRED',
+          data: null,
+        } as APIResponse<null>, 400);
+      }
     }
 
     // Actualizar solo campos permitidos

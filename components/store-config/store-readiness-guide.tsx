@@ -18,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import { useGuide } from "@/components/guide/GuideProvider";
 import { getProducts } from "@/lib/cloudflare-api";
 import { useIsDark } from "@/lib/use-is-dark";
-import { productVisibility, storeReadiness, type StoreReadinessInput } from "@/lib/store-readiness";
+import { idleShippingZones, productVisibility, storeReadiness, type StoreReadinessInput } from "@/lib/store-readiness";
+import { getShippingZones } from "@/lib/shipping-zones";
 
 // Solo lo que usan estas dos gráficas: Chart.js se queda pequeño en el bundle.
 Chart.register(DoughnutController, ArcElement, BarController, BarElement, CategoryScale, LinearScale, Tooltip);
@@ -169,6 +170,17 @@ export function StoreReadinessGuide(props: Omit<StoreReadinessInput, "products">
   const { getToken } = useAuth();
   const { openGuide } = useGuide();
   const [products, setProducts] = useState<StoreReadinessInput["products"]>(null);
+  const [zones, setZones] = useState<{ is_active?: boolean | number | null }[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getShippingZones(getToken)
+      .then((list) => !cancelled && setZones(list))
+      .catch(() => !cancelled && setZones([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,6 +195,7 @@ export function StoreReadinessGuide(props: Omit<StoreReadinessInput, "products">
   const { steps, percent, canSell } = storeReadiness({ ...props, products });
   const visibility = useMemo(() => (products ? productVisibility(products) : null), [products]);
   const pending = steps.filter((s) => !s.done);
+  const idleZones = idleShippingZones(zones, props.storeShippingEnabled);
 
   return (
     <section
@@ -213,6 +226,20 @@ export function StoreReadinessGuide(props: Omit<StoreReadinessInput, "products">
           </Button>
         </div>
       </div>
+
+      {/* Zonas creadas con el domicilio apagado: el cliente no puede pedir domicilio */}
+      {idleZones > 0 && (
+        <div role="alert" className="mt-5 flex flex-col gap-3 rounded-xl border-2 border-brand/50 bg-brand-light p-4 sm:flex-row sm:items-center">
+          <p className="flex-1 text-sm text-gray-900">
+            <strong>Tus clientes no pueden pedir domicilio.</strong> Tienes {idleZones} zona
+            {idleZones === 1 ? "" : "s"} de envío, pero el envío a domicilio está apagado: actívalo en
+            &quot;Entregas&quot; y guarda.
+          </p>
+          <Button size="sm" onClick={() => goToSection("store-delivery")} className="shrink-0 cursor-pointer">
+            Activar domicilio
+          </Button>
+        </div>
+      )}
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <ol className="space-y-1.5">

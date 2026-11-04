@@ -38,6 +38,7 @@ import {
 } from "@/lib/storefront-access";
 import { StorefrontUserStats } from "@/components/store/storefront-user-stats";
 import { StoreReadinessGuide } from "@/components/store-config/store-readiness-guide";
+import { hasValidNequiNumber } from "@/lib/store-readiness";
 import Swal from "sweetalert2";
 
 const StoreQRGenerator = dynamic(
@@ -218,6 +219,11 @@ export default function StoreConfigPage() {
         toast.error("El nombre de la tienda es requerido");
         return;
       }
+      if (!hasValidNequiNumber(storeNequiNumber)) {
+        toast.error("Para activar la tienda escribe tu número de Nequi (10 dígitos): ahí te pagan los clientes.");
+        document.querySelector('[data-guide="store-contact"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
 
       // Validar formato del slug (solo letras, números y guiones)
       const slugRegex = /^[a-z0-9-]+$/;
@@ -371,8 +377,28 @@ export default function StoreConfigPage() {
                 </p>
               )}
             </div>
-            <Switch checked={storeEnabled} onCheckedChange={setStoreEnabled} />
+            <Switch
+              checked={storeEnabled}
+              onCheckedChange={(on) => {
+                // Sin Nequi el cliente no tiene a dónde pagar: no se deja encender.
+                if (on && !hasValidNequiNumber(storeNequiNumber)) {
+                  toast.error("Primero escribe tu número de Nequi: ahí te pagan los clientes.");
+                  document
+                    .querySelector('[data-guide="store-contact"]')
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  return;
+                }
+                setStoreEnabled(on);
+              }}
+              aria-label="Activar o desactivar la tienda online"
+            />
           </div>
+          {!hasValidNequiNumber(storeNequiNumber) && (
+            <p className="rounded-lg border border-brand/30 bg-brand-light px-4 py-3 text-sm text-gray-800">
+              Para activar la tienda necesitas tu <strong>número de Nequi</strong> (abajo, en
+              &quot;Redes Sociales y Contacto&quot;). Sin él tus clientes no tienen a dónde pagarte.
+            </p>
+          )}
         </CardContent>
       </Card>
 
