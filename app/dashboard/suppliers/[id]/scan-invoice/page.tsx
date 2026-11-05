@@ -22,6 +22,7 @@ import {
   createProduct,
   updateProduct,
   createPurchaseOrder,
+  tenantHeaders,
 } from "@/lib/cloudflare-api";
 import type { Supplier, Product, PurchaseOrderItem } from "@/lib/cloudflare-api";
 import { toast } from "sonner";
@@ -125,7 +126,7 @@ export default function ScanInvoicePage() {
       const { base64, mimeType } = await fileToBase64(file);
       const res = await fetch("/api/ai/read-invoice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: tenantHeaders(),
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       });
       const data = await res.json();

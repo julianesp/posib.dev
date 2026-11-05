@@ -39,8 +39,14 @@ export async function POST(request: NextRequest) {
     let profile: UserProfile | undefined;
     let userApiKey: string | undefined;
     try {
-      const profileRes = await fetch(`${WORKER_URL}/api/user-profiles/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const profileRes = await fetch(`${WORKER_URL}/api/user-profiles`, {
+        // Sin X-Tenant-ID el Worker usa la tienda propia del usuario.
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(request.headers.get('X-Tenant-ID')
+            ? { 'X-Tenant-ID': request.headers.get('X-Tenant-ID')! }
+            : {}),
+        },
       });
       if (profileRes.ok) {
         const profileData = await profileRes.json();

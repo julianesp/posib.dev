@@ -41,9 +41,9 @@ import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup
 import { AccentConfig } from "@/components/config/accent-config";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
 import { landingConfig } from "@/lib/landing-config";
+import { getUserProfile, updateUserProfile, type UserProfile } from "@/lib/cloudflare-api";
 import { useAuth } from "@clerk/nextjs";
 
-const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
 export default function ConfigPage() {
   const { user } = useUser();
@@ -58,6 +58,7 @@ export default function ConfigPage() {
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [savingGeminiKey, setSavingGeminiKey] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -86,13 +87,12 @@ export default function ConfigPage() {
 
       // Cargar gemini_api_key del perfil
       if (token) {
-        const profileRes = await fetch(`${WORKER_URL}/api/user-profiles/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          const key = profileData.data?.gemini_api_key || profileData.gemini_api_key || "";
-          setGeminiApiKey(key);
+        try {
+          const profile = await getUserProfile(getToken);
+          setProfileId(profile.id);
+          setGeminiApiKey(profile.gemini_api_key || "");
+        } catch {
+          /* sin perfil (p. ej. miembro del equipo): la sección de IA queda vacía */
         }
       }
     } catch (error) {
@@ -106,16 +106,12 @@ export default function ConfigPage() {
   const handleSaveGeminiKey = async () => {
     setSavingGeminiKey(true);
     try {
-      const token = await getToken();
-      const res = await fetch(`${WORKER_URL}/api/user-profiles/me`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ gemini_api_key: geminiApiKey.trim() || null }),
-      });
-      if (!res.ok) throw new Error("Error al guardar");
+      const id = profileId ?? (await getUserProfile(getToken)).id;
+      await updateUserProfile(
+        id,
+        { gemini_api_key: geminiApiKey.trim() || null } as Partial<UserProfile>,
+        getToken,
+      );
       toast.success("API Key de Gemini guardada");
     } catch {
       toast.error("Error al guardar la API Key");
@@ -513,7 +509,7 @@ export default function ConfigPage() {
               <li className="flex gap-3 text-sm text-purple-900">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">3</span>
                 <span>
-                  <strong>Copia</strong> el código que aparece (empieza con <code>AIza</code>) y
+                  <strong>Copia</strong> el código que aparece (empieza con <code>AIza</code> o <code>AQ.</code>) y
                   <strong> pégalo aquí abajo</strong>. Luego toca <strong>Guardar</strong>.
                 </span>
               </li>
@@ -536,7 +532,7 @@ export default function ConfigPage() {
                   type={showGeminiKey ? "text" : "password"}
                   value={geminiApiKey}
                   onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="AIzaSy..."
+                  placeholder="AIzaSy... o AQ...."
                   className="pr-10 font-mono text-sm"
                 />
                 <button

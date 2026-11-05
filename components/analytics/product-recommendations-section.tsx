@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Sparkles, RefreshCw, TrendingUp, Tag, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
+import { tenantHeaders } from '@/lib/cloudflare-api';
 
 interface ProductRecommendationsSectionProps {
   currentInventory: Array<{
@@ -104,7 +105,7 @@ export function ProductRecommendationsSection({
 
       const response = await fetch('/api/ai/product-recommendations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: tenantHeaders(),
         body: JSON.stringify({
           currentInventory,
           storeType: storeType || 'Tienda general',
