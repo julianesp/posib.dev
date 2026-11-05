@@ -444,6 +444,72 @@ body {
     0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
+/*
+ * Luz que recorre el contorno de cada letra de la marca del navbar.
+ * Un ::before repite el texto (data-text) solo como trazo blanco de 4px detrás
+ * de las letras: la mitad interior del trazo queda tapada por el texto, así
+ * que se ve como un borde por FUERA de cada letra. Una máscara muestra solo
+ * una franja de ese borde y la hace pasar de lado a lado, sin parar.
+ * El halo va con text-shadow (solo rodea las letras): un filter drop-shadow
+ * junto con la máscara pintaba un rectángulo detrás del texto.
+ */
+@keyframes trace-sweep {
+  from {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+  }
+  to {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+  }
+}
+
+.brand-trace {
+  position: relative;
+  isolation: isolate;
+}
+
+.brand-trace::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: transparent;
+  -webkit-text-stroke: 4px #fff;
+  /* Reemplaza (no hereda) el contorno oscuro de .text-outline-dark. */
+  text-shadow:
+    0 0 6px #fff,
+    0 0 12px rgba(255, 255, 255, 0.85);
+  -webkit-mask-image: linear-gradient(
+    100deg,
+    transparent 38%,
+    #000 47%,
+    #000 53%,
+    transparent 62%
+  );
+  mask-image: linear-gradient(
+    100deg,
+    transparent 38%,
+    #000 47%,
+    #000 53%,
+    transparent 62%
+  );
+  -webkit-mask-size: 300% 100%;
+  mask-size: 300% 100%;
+  animation: trace-sweep 2.8s linear infinite;
+  pointer-events: none;
+}
+
+/* Reduced motion: queda el borde blanco por fuera de las letras, sin barrido. */
+@media (prefers-reduced-motion: reduce) {
+  .brand-trace::before {
+    animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+    opacity: 0.6;
+  }
+}
+
 /* Ajustar posición de toasts para que no tapen el botón del carrito */
 [data-sonner-toaster] {
   top: 80px !important;

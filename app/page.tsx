@@ -24,6 +24,8 @@ import {
 import NavbarRueda from "@/components/landing/NavbarRueda";
 import FadeInSection from "@/components/landing/FadeInSection";
 import WhatsAppButton from "@/components/landing/WhatsAppButton";
+import BackToTop from "@/components/landing/BackToTop";
+import AuthCtas from "@/components/landing/AuthCtas";
 import PricingPlans from "@/components/landing/PricingPlans";
 import WhyPosib from "@/components/landing/WhyPosib";
 import ProcessShowcase from "@/components/landing/process-showcase/ProcessShowcase";
@@ -46,6 +48,7 @@ export default function Home() {
 
       {/* WhatsApp Button */}
       <WhatsAppButton />
+      <BackToTop />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
@@ -72,29 +75,10 @@ export default function Home() {
             Punto de venta, inventario, fiados y reportes — todo desde el
             celular que ya tienes. Sin cajas registradoras ni equipos costosos.
           </p>
-          <div className="flex flex-col gap-3 justify-center sm:flex-row">
-            <Link href="/sign-up" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="h-12 w-full px-7 text-sm font-semibold bg-brand hover:bg-brand-hover text-white cursor-pointer shadow-lg shadow-brand/20 sm:w-auto"
-              >
-                Empezar gratis 30 días
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/sign-in" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="ghost"
-                className="lp-ghost-btn h-12 w-full px-7 text-sm font-medium cursor-pointer border sm:w-auto"
-              >
-                Ya tengo cuenta
-              </Button>
-            </Link>
-          </div>
+          <AuthCtas />
 
           {/* Social proof mínimo */}
-          <p className="lp-subtle mt-8 text-xs">
+          <p className="lp-text mt-8 inline-block rounded-2xl border-2 border-brand px-4 py-2 text-xs font-medium leading-relaxed">
             Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español
           </p>
         </div>
@@ -388,27 +372,8 @@ export default function Home() {
               30 días gratis sin tarjeta. Configura en minutos y empieza a
               vender hoy mismo.
             </p>
-            <div className="flex flex-col gap-3 justify-center sm:flex-row">
-              <Link href="/sign-up" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="h-12 w-full px-8 text-sm font-semibold bg-brand hover:bg-brand-hover text-white cursor-pointer shadow-xl shadow-brand/25 sm:w-auto"
-                >
-                  Crear cuenta gratis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/sign-in" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  className="lp-ghost-btn h-12 w-full px-7 text-sm font-medium cursor-pointer border sm:w-auto"
-                >
-                  Ya tengo cuenta
-                </Button>
-              </Link>
-            </div>
-            <p className="lp-subtle mt-6 text-xs">
+            <AuthCtas primaryLabel="Crear cuenta gratis" />
+            <p className="lp-text mt-6 inline-block rounded-2xl border-2 border-brand px-4 py-2 text-xs font-medium leading-relaxed">
               Sin tarjeta de crédito · Cancela cuando quieras · Soporte en
               español
             </p>

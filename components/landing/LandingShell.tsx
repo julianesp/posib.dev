@@ -22,13 +22,14 @@ const LIGHT_CSS = `
 
 const DARK_CSS = `
   .landing-root .lp-text         { color: #ffffff !important; }
-  .landing-root .lp-muted        { color: rgba(255,255,255,0.58) !important; }
-  .landing-root .lp-subtle       { color: rgba(255,255,255,0.35) !important; }
+  /* En oscuro los textos secundarios van en blanco: en gris no se leían. */
+  .landing-root .lp-muted        { color: #ffffff !important; }
+  .landing-root .lp-subtle       { color: #ffffff !important; }
   .landing-root .lp-card         { background: rgba(255,255,255,0.03) !important; }
   .landing-root .lp-border       { border-color: rgba(255,255,255,0.05) !important; }
-  .landing-root .lp-ghost-btn    { color: rgba(255,255,255,0.70) !important; border-color: rgba(255,255,255,0.10) !important; }
+  .landing-root .lp-ghost-btn    { color: #ffffff !important; border-color: rgba(255,255,255,0.25) !important; }
   .landing-root .lp-ghost-btn:hover { color: #ffffff !important; background: rgba(255,255,255,0.08) !important; }
-  .landing-root .lp-badge        { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.10) !important; color: rgba(255,255,255,0.60) !important; }
+  .landing-root .lp-badge        { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.10) !important; color: #ffffff !important; }
   .landing-root .lp-modal-bg     { background: #252932 !important; color: #ffffff !important; }
   .landing-root .lp-section-sep  { border-color: rgba(255,255,255,0.05) !important; }
   .landing-root .lp-icon-bg      { background: rgba(255,255,255,0.06) !important; }

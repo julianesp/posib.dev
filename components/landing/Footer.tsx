@@ -8,11 +8,11 @@ const { contact } = landingConfig;
 // Mismo logo que la barra de navegación (NavbarRueda).
 const LOGO_URL = "https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png";
 
-// Los enlaces van en gris claro y se aclaran a blanco al pasar el mouse. El
+// Los enlaces van en blanco y pasan a verde agua al pasar el mouse. El
 // `!` es necesario porque el tema global fuerza el color del texto; antes el
 // hover:text-brand nunca se veía por el !text-white.
 const linkClass =
-  "rounded-sm text-sm !text-gray-300 transition-colors hover:!text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800";
+  "rounded-sm text-sm !text-white transition-colors hover:!text-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800";
 
 const contactLinks = [
   {
@@ -76,7 +76,7 @@ export default function Footer() {
             <p className="text-sm font-medium !text-white">
               {landingConfig.brand.tagline}
             </p>
-            <p className="max-w-sm text-sm !text-gray-300">
+            <p className="max-w-sm text-sm !text-white">
               Sistema integral de punto de venta, inventario, facturación y
               gestión de clientes para tiendas en Colombia. Todo lo que
               necesitas en un solo plan.
@@ -166,7 +166,7 @@ export default function Footer() {
       {/* Barra inferior */}
       <div className="border-t border-gray-700">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 text-center md:flex-row md:text-left">
-          <p className="text-xs !text-gray-300">
+          <p className="text-xs !text-white">
             © {year} <span translate="no">{landingConfig.brand.name}</span> —
             Todos los derechos reservados · Hecho en Colombia
           </p>

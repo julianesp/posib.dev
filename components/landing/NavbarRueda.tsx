@@ -159,10 +159,12 @@ export default function NavbarRueda() {
 
           {/* Marca centrada */}
           <Link href="/" className={styles.logoLink}>
+            {/* Luz recorriendo el contorno de las letras (.brand-trace en globals.css) */}
             <span
-              className={`text-xl md:text-2xl font-bold ${
+              className={`brand-trace text-xl md:text-2xl font-bold ${
                 dark ? "text-white text-outline-dark" : "text-brand"
               }`}
+              data-text="posib.dev"
               translate="no"
             >
               posib.dev
