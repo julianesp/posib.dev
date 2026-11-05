@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { ArrowDownToLine, ArrowUpFromLine, History, Loader2, Lock, LockOpen, Trash2, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, HelpCircle, History, Loader2, Lock, LockOpen, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { useGuide } from "@/components/guide/GuideProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,6 +59,7 @@ const formatPesosInput = (text: string) => {
  */
 export function CashRegisterControl() {
   const { getToken } = useAuth();
+  const { openGuide } = useGuide();
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "hidden" }
@@ -207,6 +209,7 @@ export function CashRegisterControl() {
   return (
     <>
       <div
+        data-guide="cash-status"
         className={cn(
           "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2.5",
           state.kind === "open" ? "border-brand/40 bg-brand-light/40" : "border-amber-300 bg-amber-50",
@@ -241,8 +244,18 @@ export function CashRegisterControl() {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => openGuide("caja")}
+            title="¿Cómo funciona la caja?"
+            aria-label="¿Cómo funciona la caja?"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-white"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
           <Link
             href="/dashboard/sales/caja"
+            data-guide="cash-history"
             title="Ver cierres de caja"
             aria-label="Ver cierres de caja"
             className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-white"
@@ -250,18 +263,18 @@ export function CashRegisterControl() {
             <History className="h-4 w-4" />
           </Link>
           {state.kind === "open" ? (
-            <Button size="sm" variant="outline" onClick={() => startMove("salida")} className="cursor-pointer bg-white">
+            <Button size="sm" variant="outline" onClick={() => startMove("salida")} className="cursor-pointer bg-white" data-guide="cash-move">
               <ArrowUpFromLine className="mr-1.5 h-4 w-4" />
               Sacar / meter
             </Button>
           ) : null}
           {state.kind === "open" ? (
-            <Button size="sm" onClick={startClose} className="cursor-pointer">
+            <Button size="sm" onClick={startClose} className="cursor-pointer" data-guide="cash-close">
               <Wallet className="mr-1.5 h-4 w-4" />
               Cerrar caja
             </Button>
           ) : (
-            <Button size="sm" onClick={() => setOpenDialog(true)} className="cursor-pointer">
+            <Button size="sm" onClick={() => setOpenDialog(true)} className="cursor-pointer" data-guide="cash-open">
               <LockOpen className="mr-1.5 h-4 w-4" />
               Abrir caja
             </Button>

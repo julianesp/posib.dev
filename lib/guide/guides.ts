@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   Store,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -206,6 +207,48 @@ export const GUIDES: Guide[] = [
       },
     ],
     tip: "Funciona sin internet: las ventas se guardan y se envían solas cuando vuelva la conexión.",
+  },
+  {
+    // Misma pantalla que "vender": findGuideForPath y el aviso de primera visita
+    // siguen eligiendo "vender" (va antes). A esta se entra con el botón de ayuda
+    // de la franja de caja o desde "Todas las guías".
+    id: "caja",
+    title: "Cierre de caja",
+    summary: "Abre con la base, anota lo que sacas y cuadra al final del turno.",
+    href: "/dashboard/pos",
+    icon: Wallet,
+    sceneId: "caja",
+    steps: [
+      {
+        title: "La franja de caja",
+        text: "Arriba del punto de venta ves si la caja está abierta, desde qué hora y con qué base.",
+        target: "cash-status",
+      },
+      {
+        title: "Abre la caja",
+        text: "Al empezar el turno, escribe con cuánto efectivo arrancas (la base). Puedes vender aunque no la abras, pero sin abrirla no hay cuadre.",
+        target: "cash-open",
+        missing: "Ya tienes la caja abierta; este botón aparece cuando la cierres.",
+      },
+      {
+        title: "Saca o mete efectivo",
+        text: "Si pagas a un proveedor o traes cambio, regístralo con el motivo para que el cuadre no te falle.",
+        target: "cash-move",
+        missing: "Aparece cuando abras la caja.",
+      },
+      {
+        title: "Cierra y cuadra",
+        text: "Cuenta el efectivo del cajón y escríbelo. posib calcula cuánto debía haber y te dice si falta o sobra.",
+        target: "cash-close",
+        missing: "Aparece cuando abras la caja.",
+      },
+      {
+        title: "Revisa los cierres",
+        text: "Este botón abre el historial: cada turno con su base, sus ventas, sus salidas y la diferencia.",
+        target: "cash-history",
+      },
+    ],
+    tip: "Nequi y los fiados no van al cajón: el cuadre solo cuenta efectivo. Al cerrar te llega el resumen por Telegram si lo tienes conectado.",
   },
   {
     id: "clientes",

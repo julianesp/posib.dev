@@ -1,9 +1,13 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
   Bot,
   Boxes,
   CircleCheck,
   HandCoins,
+  Lock,
+  LockOpen,
   PackagePlus,
   Package,
   Plus,
@@ -11,6 +15,7 @@ import {
   Send,
   ShoppingCart,
   Store,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import s from "./ProcessShowcase.module.css";
@@ -354,6 +359,170 @@ function FiadoScreen({ step }: { step: number }) {
           Registrar abono
         </Btn>
       </div>
+    </>
+  );
+}
+
+/* ───────────── 4. Cierre de caja ───────────── */
+
+const CASH_SALES = [
+  { hour: "8:15", amount: "$ 29.000" },
+  { hour: "10:40", amount: "$ 43.000" },
+  { hour: "12:05", amount: "$ 57.000" },
+];
+
+/** Hoja que sube desde abajo sobre la pantalla del POS (con fondo oscurecido). */
+function Sheet({ show, children }: { show: boolean; children: ReactNode }) {
+  return (
+    <>
+      <div
+        className={`absolute inset-0 z-10 bg-black/30 transition-opacity duration-500 motion-reduce:transition-none ${
+          show ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+      <div
+        className={`absolute inset-x-0 bottom-0 z-20 space-y-2 rounded-t-2xl bg-white p-3 transition-all duration-500 motion-reduce:transition-none ${
+          show ? "translate-y-0 shadow-[0_-8px_24px_rgba(0,0,0,0.2)]" : "translate-y-full"
+        }`}
+      >
+        {children}
+      </div>
+    </>
+  );
+}
+
+function CajaScreen({ step }: { step: number }) {
+  const open = step >= 1;
+  return (
+    <>
+      <AppBar title="Punto de venta" />
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <div
+          className={`flex items-center gap-2 rounded-lg border p-2 transition-colors duration-500 ${
+            open ? "border-brand/40 bg-brand/5" : "border-amber-300 bg-amber-50"
+          }`}
+        >
+          <div
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white transition-colors duration-500 ${
+              open ? "bg-brand" : "bg-amber-400"
+            }`}
+          >
+            {open ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] font-semibold text-slate-800">
+              {open ? "Caja abierta desde las 7:00" : "Caja cerrada"}
+            </div>
+            <div className="text-[10px] text-slate-500">
+              {open ? "Base $ 50.000" : "Ábrela con la base del día"}
+            </div>
+          </div>
+        </div>
+
+        <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+          Hoy en el cajón
+        </div>
+        <div className="space-y-1.5">
+          {open &&
+            CASH_SALES.map((sale, i) => (
+              <Pop key={sale.hour} delay={step === 1 ? 300 + i * 450 : 0}>
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[12px]">
+                  <span className="text-slate-600">Venta en efectivo · {sale.hour}</span>
+                  <span className="font-medium text-emerald-700">+ {sale.amount}</span>
+                </div>
+              </Pop>
+            ))}
+          {step >= 3 && (
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[12px]">
+              <span className="text-slate-600">Salida · Pago al panadero</span>
+              <span className="font-medium text-red-600">− $ 20.000</span>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-auto grid grid-cols-2 gap-1.5">
+          <Btn outline>
+            <ArrowUpFromLine className="h-3.5 w-3.5" />
+            Sacar / meter
+          </Btn>
+          <Btn>
+            <Wallet className="h-3.5 w-3.5" />
+            Cerrar caja
+          </Btn>
+        </div>
+      </div>
+
+      {/* 1. Abrir caja */}
+      <Sheet show={step === 0}>
+        <div className="text-[13px] font-semibold text-slate-800">Abrir caja</div>
+        <Field label="¿Con cuánto efectivo empiezas?" active>
+          {step === 0 && <Typed text="$ 50.000" delayMs={300} />}
+        </Field>
+        <Btn tap={step === 0} tapDelay={1700}>
+          <LockOpen className="h-3.5 w-3.5" />
+          Abrir caja
+        </Btn>
+      </Sheet>
+
+      {/* 3. Sacar efectivo */}
+      <Sheet show={step === 2}>
+        <div className="text-[13px] font-semibold text-slate-800">
+          Sacar o meter efectivo
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="flex items-center justify-center gap-1 rounded-lg border border-brand bg-brand/10 py-1.5 text-[11px] font-medium text-brand">
+            <ArrowUpFromLine className="h-3.5 w-3.5" />
+            Sacar
+          </div>
+          <div className="flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-1.5 text-[11px] font-medium text-slate-500">
+            <ArrowDownToLine className="h-3.5 w-3.5" />
+            Meter
+          </div>
+        </div>
+        <Field label="Valor" active>
+          {step === 2 && <Typed text="$ 20.000" delayMs={200} />}
+        </Field>
+        <Field label="Motivo">
+          {step === 2 && <Typed text="Pago al panadero" delayMs={900} />}
+        </Field>
+        <Btn tap={step === 2} tapDelay={2300}>
+          Guardar salida
+        </Btn>
+      </Sheet>
+
+      {/* 4. Cerrar y cuadrar */}
+      <Sheet show={step === 3}>
+        <div className="text-[13px] font-semibold text-slate-800">Cerrar caja</div>
+        <div className="space-y-1 rounded-lg border border-slate-200 p-2.5 text-[11px]">
+          <div className="flex justify-between text-slate-600">
+            <span>Base</span>
+            <span>$ 50.000</span>
+          </div>
+          <div className="flex justify-between text-slate-600">
+            <span>Ventas en efectivo</span>
+            <span className="text-emerald-700">+ $ 129.000</span>
+          </div>
+          <div className="flex justify-between text-slate-600">
+            <span>Salidas</span>
+            <span className="text-red-600">− $ 20.000</span>
+          </div>
+          <div className="flex justify-between border-t border-dashed border-slate-300 pt-1 text-[12px] font-bold text-slate-800">
+            <span>Debe haber</span>
+            <span>$ 159.000</span>
+          </div>
+        </div>
+        <Field label="¿Cuánto contaste en el cajón?" active>
+          {step === 3 && <Typed text="$ 159.000" delayMs={500} />}
+        </Field>
+        {step === 3 && (
+          <Pop delay={1900}>
+            <div className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 py-2 text-[12px] font-semibold text-emerald-700">
+              <CircleCheck className="h-4 w-4" />
+              La caja cuadra exacto
+            </div>
+          </Pop>
+        )}
+      </Sheet>
     </>
   );
 }
@@ -765,6 +934,33 @@ export const SCENES: Scene[] = [
       },
     ],
     Screen: FiadoScreen,
+  },
+  {
+    id: "caja",
+    tab: "Cierre de caja",
+    icon: Wallet,
+    title: "Cuadra la caja al final del día",
+    blurb:
+      "Sabes cuánto efectivo debe haber en el cajón y si falta o sobra plata.",
+    steps: [
+      {
+        title: "Abre la caja con la base",
+        text: "Al empezar el turno escribes con cuánto efectivo arrancas.",
+      },
+      {
+        title: "Vendes como siempre",
+        text: "Cada venta en efectivo suma sola a lo que debe haber en el cajón.",
+      },
+      {
+        title: "Anota lo que sacas o metes",
+        text: "Si le pagas al proveedor o cambias billetes, lo registras con el motivo.",
+      },
+      {
+        title: "Cierra y cuadra",
+        text: "Cuentas el efectivo y posib te dice si cuadra, falta o sobra.",
+      },
+    ],
+    Screen: CajaScreen,
   },
   {
     id: "inventario",
