@@ -58,9 +58,11 @@ function ScenePlayer({
       id="showcase-panel"
       role="tabpanel"
       aria-labelledby={`showcase-tab-${scene.id}`}
-      className="mt-8 grid items-start gap-8 md:mt-10 md:grid-cols-2 md:gap-x-14 md:gap-y-6"
+      className="mt-5 grid items-start gap-8 md:mt-10 md:grid-cols-2 md:gap-x-14 md:gap-y-6"
     >
-      <div className="md:col-start-1 md:row-start-1 md:self-end">
+      {/* En el celular se oculta título y descripción: empujaban el celular
+          animado fuera de la pantalla. La pestaña ya dice qué proceso es. */}
+      <div className="hidden md:col-start-1 md:row-start-1 md:block md:self-end">
         {scene.badge && (
           <span className="mb-3 inline-block rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand">
             {scene.badge}
