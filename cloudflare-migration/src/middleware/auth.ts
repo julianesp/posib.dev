@@ -45,20 +45,17 @@ function isSubscriptionExemptPath(pathname: string): boolean {
   );
 }
 
-// Solo se aceptan issuers de Clerk para evitar que un atacante apunte a un JWKS
-// arbitrario controlado por él.
-function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
-  if (env.CLERK_JWT_ISSUER && issuer === env.CLERK_JWT_ISSUER.replace(/\/$/, '')) {
-    return true;
-  }
-  try {
-    const host = new URL(issuer).hostname;
-    // Instancias de desarrollo (<slug>.clerk.accounts.dev) e instancias de
-    // producción con dominio propio (clerk.<dominio>).
-    return host.endsWith('.clerk.accounts.dev') || host.startsWith('clerk.');
-  } catch {
-    return false;
-  }
+// Solo se aceptan los issuers de NUESTRAS instancias de Clerk, comparados de
+// forma exacta. Antes se aceptaba cualquier host "clerk.*" o "*.clerk.accounts.dev":
+// un atacante podía publicar su propio JWKS en clerk.<su-dominio>, firmar un
+// token con el `sub` de otro usuario (incluido el superadmin) y el Worker lo
+// daba por válido. La lista viene de CLERK_JWT_ISSUERS (separada por comas, en
+// wrangler.toml) y de CLERK_JWT_ISSUER.
+export function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
+  const allowed = [env.CLERK_JWT_ISSUER, ...(env.CLERK_JWT_ISSUERS ?? '').split(',')]
+    .map((i) => (i ?? '').trim().replace(/\/$/, ''))
+    .filter(Boolean);
+  return allowed.includes(issuer.replace(/\/$/, ''));
 }
 
 // Margen tras la fecha de vencimiento antes de bloquear en el Worker. El front
@@ -554,14 +551,11 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   }
 }
 
-// Re-export helper function
-export { decodeClerkToken } from './auth-helpers';
-
 /**
  * Verify Clerk JWT token
  * Returns Clerk user ID if valid, null otherwise
  */
-async function verifyClerkToken(token: string, env: Env): Promise<string | null> {
+export async function verifyClerkToken(token: string, env: Env): Promise<string | null> {
   try {
     // El issuer (iss) del token indica qué instancia de Clerk lo emitió y, por
     // tanto, dónde está su JWKS. Lo leemos SIN verificar solo para descubrir el

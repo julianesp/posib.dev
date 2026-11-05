@@ -14,6 +14,7 @@ const config = {
     '^@/(.*)$': '<rootDir>/$1',
     // Hono es dependencia del Worker (cloudflare-migration), no de la app Next.
     '^hono$': '<rootDir>/cloudflare-migration/node_modules/hono/dist/cjs/index.js',
+    '^jose$': '<rootDir>/cloudflare-migration/node_modules/jose/dist/node/cjs/index.js',
   },
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '<rootDir>/tests/**/*.test.{ts,tsx}'],
   // Las pruebas E2E (e2e/) son de Playwright: se corren con `pnpm e2e`.

@@ -14,6 +14,9 @@ export interface Env {
   // "https://clerk.posib.dev" (prod) o "https://<slug>.clerk.accounts.dev" (dev).
   // Se usa para verificar la firma del token contra el JWKS de Clerk.
   CLERK_JWT_ISSUER?: string;
+  // Lista de issuers aceptados, separados por comas (prod + instancia de dev
+  // que usan `pnpm dev` y la E2E contra este mismo Worker). Ver wrangler.toml.
+  CLERK_JWT_ISSUERS?: string;
 
   // CRON secret for scheduled tasks
   CRON_SECRET?: string;

@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env, AppEnv } from './types';
-import { authMiddleware } from './middleware/auth';
+import { authMiddleware, verifyClerkToken } from './middleware/auth';
 import type { ScheduledEvent, ExecutionContext } from '@cloudflare/workers-types';
 
 // Import routes
@@ -115,17 +115,11 @@ app.post('/api/team-invitations/accept', async (c) => {
 
     const token = authHeader.substring(7);
 
-    // Verificar token de Clerk manualmente
-    const { decodeClerkToken } = await import('./middleware/auth-helpers');
-    let clerkUserId: string;
-
-    try {
-      const payload = await decodeClerkToken(token);
-      clerkUserId = payload.sub || '';
-      if (!clerkUserId) {
-        throw new Error('Invalid token');
-      }
-    } catch (error) {
+    // Verificar firma, expiración e issuer del token de Clerk (antes solo se
+    // decodificaba sin verificar: cualquiera podía aceptar una invitación a
+    // nombre de otro usuario).
+    const clerkUserId = await verifyClerkToken(token, c.env);
+    if (!clerkUserId) {
       return c.json({
         success: false,
         error: 'Token inválido',

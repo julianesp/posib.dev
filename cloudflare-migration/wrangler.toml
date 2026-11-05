@@ -11,6 +11,9 @@ account_id = "b85347650ec6de9ad5b2873c3389d0e6"
 # POST {APP_URL}/api/backup/run. Sin esto, runDriveBackups() se omite.
 [vars]
 APP_URL = "https://posib.dev"
+# Issuers de Clerk aceptados (comparación exacta; ver isAllowedClerkIssuer).
+# Prod (clerk.posib.dev) + instancia de desarrollo que usan `pnpm dev` y la E2E.
+CLERK_JWT_ISSUERS = "https://clerk.posib.dev,https://excited-foal-90.clerk.accounts.dev"
 
 # Environment variables
 [env.production]
