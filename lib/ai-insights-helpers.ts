@@ -1,6 +1,6 @@
 // Google Gemini configuration
 // La key del usuario tiene prioridad; la del sistema es fallback para compatibilidad
-import { GEMINI_API_URL } from './gemini-model';
+import { fetchGemini } from './gemini-model';
 
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -85,7 +85,7 @@ IMPORTANTE:
 - Máximo 300 palabras
 - Usa los emojis indicados en cada sección`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const response = await fetchGemini(apiKey, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -204,7 +204,7 @@ IMPORTANTE:
 - Usa lenguaje claro y directo
 - Máximo 350 palabras`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const response = await fetchGemini(apiKey, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -282,7 +282,7 @@ Proporciona:
 
 Formato: Conciso, con emojis. Máximo 250 palabras.`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const response = await fetchGemini(apiKey, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

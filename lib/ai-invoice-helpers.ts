@@ -2,7 +2,7 @@
 // Sigue el mismo patrón que lib/ai-insights-helpers.ts: misma key (del usuario o
 // del sistema como fallback) y el modelo de lib/gemini-model.ts, que soporta imágenes.
 
-import { GEMINI_API_URL } from './gemini-model';
+import { fetchGemini } from './gemini-model';
 
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -70,7 +70,7 @@ REGLAS IMPORTANTES:
 
   let response: Response;
   try {
-    response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    response = await fetchGemini(apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

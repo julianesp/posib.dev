@@ -1,7 +1,7 @@
 // Sugerencia de nombre de producto a partir de una foto del empaque (Gemini, visión).
 // Misma key (del tendero o del sistema) y modelo que lib/ai-invoice-helpers.ts.
 
-import { GEMINI_API_URL } from './gemini-model';
+import { fetchGemini } from './gemini-model';
 
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -54,7 +54,7 @@ Devuelve ÚNICAMENTE un JSON válido (sin markdown) con esta forma exacta:
 
   let response: Response;
   try {
-    response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    response = await fetchGemini(apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

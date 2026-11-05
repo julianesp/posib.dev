@@ -2,7 +2,7 @@
 // categoría que no les corresponde (ej. "Monster energy" en "Frutas y verduras").
 // Misma key (del tendero o del sistema) y modelo que lib/ai-product-name-helpers.ts.
 
-import { GEMINI_API_URL } from './gemini-model';
+import { fetchGemini } from './gemini-model';
 
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -64,7 +64,7 @@ Devuelve ÚNICAMENTE un JSON válido (sin markdown) con esta forma exacta:
 
   let response: Response;
   try {
-    response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    response = await fetchGemini(apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -73,7 +73,8 @@ Devuelve ÚNICAMENTE un JSON válido (sin markdown) con esta forma exacta:
           responseMimeType: 'application/json',
           temperature: 0,
           // Clasificar nombres no necesita razonamiento; con él, 1.000 productos tardan minutos.
-          thinkingConfig: { thinkingBudget: 0 },
+          // 'low' (no thinkingBudget: 0) porque lo aceptan todos los modelos de GEMINI_MODELS.
+          thinkingConfig: { thinkingLevel: 'low' },
         },
       }),
     });
