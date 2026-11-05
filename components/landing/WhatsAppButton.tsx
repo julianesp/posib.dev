@@ -17,7 +17,8 @@ export default function WhatsAppButton() {
   return (
     <Button
       onClick={handleWhatsAppClick}
-      className="fixed bottom-6 left-6 z-50 rounded-full w-14 h-14 shadow-2xl bg-green-500 hover:bg-green-600 transition-all hover:scale-110 animate-bounce"
+      // Pegado a la esquina inferior izquierda; en iPhone respeta la barra de inicio.
+      className="fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-2 z-50 rounded-full w-14 h-14 shadow-2xl bg-green-500 hover:bg-green-600 transition-all hover:scale-110 animate-bounce"
       size="icon"
       aria-label="Contactar por WhatsApp"
     >

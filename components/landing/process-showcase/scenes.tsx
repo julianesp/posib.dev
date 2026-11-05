@@ -2,7 +2,6 @@ import type { ComponentType } from "react";
 import {
   Bot,
   Boxes,
-  Camera,
   CircleCheck,
   HandCoins,
   PackagePlus,
@@ -11,7 +10,6 @@ import {
   ScanLine,
   Send,
   ShoppingCart,
-  Sparkles,
   Store,
   type LucideIcon,
 } from "lucide-react";
@@ -356,92 +354,6 @@ function FiadoScreen({ step }: { step: number }) {
           Registrar abono
         </Btn>
       </div>
-    </>
-  );
-}
-
-/* ───────────── 4. Compra por foto de factura ───────────── */
-
-const INVOICE = [
-  { n: "Arroz Diana 500 g", q: "24", p: "$ 2.800", isNew: true },
-  { n: "Aceite Girasol 1 L", q: "12", p: "$ 10.400", isNew: false },
-  { n: "Panela 500 g", q: "30", p: "$ 2.900", isNew: true },
-  { n: "Sal Refisal 500 g", q: "20", p: "$ 1.100", isNew: false },
-];
-
-function FacturaScreen({ step }: { step: number }) {
-  return (
-    <>
-      <Layer active={step <= 1}>
-        <div className="relative flex flex-1 flex-col bg-slate-800 pt-9">
-          <div className="pointer-events-none absolute inset-x-5 top-12 h-[270px] rounded-lg border-2 border-dashed border-white/40" />
-          <div className="relative mx-auto mt-4 w-[80%] -rotate-1 overflow-hidden rounded-md bg-white p-2.5 shadow-lg">
-            <div className="text-[8px] font-bold tracking-wide text-slate-700">
-              DISTRIBUIDORA EL SOL
-            </div>
-            <div className="mb-1.5 text-[8px] text-slate-400">
-              Factura N.º 0231 · 12/09/2026
-            </div>
-            {INVOICE.map((row, i) => (
-              <div
-                key={row.n}
-                className={`${step === 1 ? s.mark : ""} flex justify-between gap-1 px-0.5 py-1 font-mono text-[9px] text-slate-700`}
-                style={
-                  step === 1
-                    ? { animationDelay: `${500 + i * 350}ms` }
-                    : undefined
-                }
-              >
-                <span className="truncate">{row.n}</span>
-                <span>{row.q}</span>
-                <span>{row.p}</span>
-              </div>
-            ))}
-            {step === 1 && <span className={s.scan} />}
-          </div>
-          <div className="mt-auto flex justify-center pb-6">
-            <div className="relative h-14 w-14 rounded-full border-4 border-white/80 p-1">
-              <div className="h-full w-full rounded-full bg-white" />
-              <Tap show={step === 0} delay={600} />
-            </div>
-          </div>
-        </div>
-      </Layer>
-
-      <Layer active={step >= 2}>
-        <AppBar title="Compra a proveedor" />
-        <div className="flex-1 space-y-2 p-3">
-          <div className="flex items-center gap-1.5 rounded-lg bg-brand/10 px-2.5 py-2 text-[11px] font-medium text-brand">
-            <Sparkles className="h-3.5 w-3.5" />
-            La IA leyó 4 productos
-          </div>
-          {step >= 2 &&
-            INVOICE.map((row, i) => (
-              <ProductRow
-                key={row.n}
-                fresh
-                delay={i * 250}
-                name={row.n}
-                sub={`${row.q} uds. · ${row.p}`}
-                right={
-                  row.isNew ? (
-                    <Badge tone="green">Nuevo</Badge>
-                  ) : (
-                    <Badge tone="brand">+ stock</Badge>
-                  )
-                }
-              />
-            ))}
-        </div>
-        <div className="p-3">
-          <Btn tap={step === 3} tapDelay={500}>
-            Agregar al inventario
-          </Btn>
-        </div>
-        <Toast show={step === 3} delay={1300}>
-          4 productos cargados
-        </Toast>
-      </Layer>
     </>
   );
 }
@@ -853,33 +765,6 @@ export const SCENES: Scene[] = [
       },
     ],
     Screen: FiadoScreen,
-  },
-  {
-    id: "factura",
-    tab: "Compra con foto",
-    icon: Camera,
-    badge: "Con IA",
-    title: "Sube una compra fotografiando la factura",
-    blurb: "La IA lee la factura del proveedor y carga los productos por ti.",
-    steps: [
-      {
-        title: "Fotografía la factura",
-        text: "La de tu proveedor, de frente y con buena luz.",
-      },
-      {
-        title: "La IA lee los productos",
-        text: "Nombres, cantidades y precios, sin digitar nada.",
-      },
-      {
-        title: "Revisa lo que leyó",
-        text: "Los productos nuevos se crean y a los que ya tienes se les suma stock.",
-      },
-      {
-        title: "Al inventario",
-        text: "Un toque y quedan cargados.",
-      },
-    ],
-    Screen: FacturaScreen,
   },
   {
     id: "inventario",
