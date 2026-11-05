@@ -10,10 +10,9 @@ export const landingConfig = {
       // Número de WhatsApp (formato: código país + número, sin + ni espacios)
       phoneNumber: '573174503604',
       defaultMessage: 'Hola, me gustaría saber más sobre el sistema POS',
-    },
-    calendly: {
-      // URL de tu cuenta de Calendly para agendar demos
-      url: 'https://calendly.com/julii1295/30min',
+      // Las demostraciones se piden por WhatsApp (no hay Calendly de pago).
+      demoMessage:
+        'Hola, quiero agendar una demostración de posib.dev para ver cómo funcionaría en mi tienda. ¿Qué día y hora les queda bien?',
     },
     email: 'admin@neurai.dev',
     // Chat en vivo Tawk.to

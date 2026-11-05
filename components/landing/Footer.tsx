@@ -14,15 +14,19 @@ const LOGO_URL = "https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/log
 const linkClass =
   "rounded-sm text-sm !text-white transition-colors hover:!text-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800";
 
+const waLink = (message: string) =>
+  `https://wa.me/${contact.whatsapp.phoneNumber}?text=${encodeURIComponent(message)}`;
+
 const contactLinks = [
   {
     name: "WhatsApp",
-    href: `https://wa.me/${contact.whatsapp.phoneNumber}?text=${encodeURIComponent(contact.whatsapp.defaultMessage)}`,
+    href: waLink(contact.whatsapp.defaultMessage),
     icon: MessageCircle,
     external: true,
   },
   { name: contact.email, href: `mailto:${contact.email}`, icon: Mail, external: false },
-  { name: "Agenda una demo", href: contact.calendly.url, icon: CalendarDays, external: true },
+  // La demo se pide por WhatsApp con el mensaje ya escrito.
+  { name: "Pide una demostración", href: waLink(contact.whatsapp.demoMessage), icon: CalendarDays, external: true },
 ];
 
 // Enlaces de navegación interna (anclas a secciones de la misma landing).

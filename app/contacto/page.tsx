@@ -5,13 +5,17 @@ import { landingConfig } from "@/lib/landing-config";
 export const metadata = {
   title: "Contacto y soporte | posib.dev",
   description:
-    "¿Necesitas ayuda con posib.dev? Escríbenos por WhatsApp o correo, o agenda una demostración gratuita. Soporte para tu tienda cuando lo necesites.",
+    "¿Necesitas ayuda con posib.dev? Escríbenos por WhatsApp o correo, o pide una demostración gratuita por WhatsApp. Soporte para tu tienda cuando lo necesites.",
 };
 
 export default function ContactoPage() {
-  const { whatsapp, email, calendly } = landingConfig.contact;
+  const { whatsapp, email } = landingConfig.contact;
   const waLink = `https://wa.me/${whatsapp.phoneNumber}?text=${encodeURIComponent(
     whatsapp.defaultMessage,
+  )}`;
+  // La demostración se pide por WhatsApp con el mensaje ya escrito.
+  const demoLink = `https://wa.me/${whatsapp.phoneNumber}?text=${encodeURIComponent(
+    whatsapp.demoMessage,
   )}`;
 
   return (
@@ -73,9 +77,9 @@ export default function ContactoPage() {
               </span>
             </a>
 
-            {/* Agendar demo */}
+            {/* Pedir demo por WhatsApp */}
             <a
-              href={calendly.url}
+              href={demoLink}
               target="_blank"
               rel="noopener noreferrer"
               className="group flex flex-col rounded-2xl border border-gray-700 bg-gray-900/40 p-6 transition-colors hover:border-brand/60 hover:bg-gray-900/70 sm:col-span-2"
@@ -84,14 +88,15 @@ export default function ContactoPage() {
                 <CalendarClock className="h-6 w-6 text-brand" />
               </div>
               <h2 className="text-lg font-semibold text-white">
-                Agendar una demostración
+                Pide una demostración
               </h2>
               <p className="mt-1 text-sm text-gray-400">
-                ¿Prefieres que te mostremos cómo funciona? Reserva 30 minutos y te
-                guiamos paso a paso, sin compromiso.
+                ¿Prefieres que te mostremos cómo funciona? Escríbenos por
+                WhatsApp, acordamos el día y la hora, y te guiamos paso a paso,
+                sin compromiso.
               </p>
               <span className="mt-3 text-sm font-medium text-brand">
-                Reservar mi demostración →
+                Pedir mi demostración por WhatsApp →
               </span>
             </a>
           </div>
