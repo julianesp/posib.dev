@@ -1,8 +1,8 @@
 // Google Gemini configuration
 // La key del usuario tiene prioridad; la del sistema es fallback para compatibilidad
+import { GEMINI_API_URL } from './gemini-model';
+
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-// Usar gemini-2.5-flash - versión estable más reciente (Junio 2025)
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
 
 function resolveApiKey(userKey?: string): string {
   const key = userKey?.trim() || SYSTEM_GEMINI_API_KEY;

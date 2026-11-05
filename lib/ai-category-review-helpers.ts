@@ -2,9 +2,9 @@
 // categoría que no les corresponde (ej. "Monster energy" en "Frutas y verduras").
 // Misma key (del tendero o del sistema) y modelo que lib/ai-product-name-helpers.ts.
 
+import { GEMINI_API_URL } from './gemini-model';
+
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 /** Más que esto no se lee con calma; la idea es mostrar los casos más claros. */
 const MAX_FINDINGS = 50; // por tanda (el cliente manda tandas de 500)

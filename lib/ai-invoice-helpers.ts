@@ -1,10 +1,10 @@
 // Lectura de facturas de compra (proveedor) con IA (Google Gemini, visión).
 // Sigue el mismo patrón que lib/ai-insights-helpers.ts: misma key (del usuario o
-// del sistema como fallback) y el modelo gemini-2.5-flash, que soporta imágenes.
+// del sistema como fallback) y el modelo de lib/gemini-model.ts, que soporta imágenes.
+
+import { GEMINI_API_URL } from './gemini-model';
 
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 function resolveApiKey(userKey?: string): string {
   const key = userKey?.trim() || SYSTEM_GEMINI_API_KEY;

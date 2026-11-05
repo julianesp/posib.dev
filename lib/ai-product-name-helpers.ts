@@ -1,9 +1,9 @@
 // Sugerencia de nombre de producto a partir de una foto del empaque (Gemini, visión).
 // Misma key (del tendero o del sistema) y modelo que lib/ai-invoice-helpers.ts.
 
+import { GEMINI_API_URL } from './gemini-model';
+
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 export interface SuggestNameResult {
   /** Nombre sugerido; vacío si la foto no permite leer el empaque. */
