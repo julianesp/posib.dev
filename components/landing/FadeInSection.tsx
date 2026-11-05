@@ -46,7 +46,7 @@ export default function FadeInSection({
       // ve porque termina antes de llegar), sino cuando la sección ya subió
       // ~25% dentro del viewport, bien a la vista. Así se alcanza a ver el
       // fade-in completo.
-      { threshold: 0, rootMargin: "0px 0px -55% 0px" },
+      { threshold: 0, rootMargin: "0px 0px -25% 0px" },
     );
 
     observer.observe(el);
