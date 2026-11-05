@@ -1054,6 +1054,105 @@ export async function savePartnership(data: Partnership, getToken: GetTokenFn): 
   return fetchAPI('/api/partnership', getToken, { method: 'PUT', body: JSON.stringify(data) });
 }
 
+/** Apertura y cierre de caja (Punto de Venta). Ver routes/cash-sessions.ts del Worker. */
+export interface CashMethodTotal {
+  count: number;
+  total: number;
+}
+
+export interface CashMovement {
+  id: string;
+  kind: 'salida' | 'entrada';
+  amount: number;
+  reason: string;
+  created_by_name: string | null;
+  created_at: string;
+}
+
+export interface CashSummary {
+  sales: Record<string, CashMethodTotal>;
+  payments: Record<string, CashMethodTotal>;
+  sales_count: number;
+  cash_sales: number;
+  cash_payments: number;
+  cash_in: number;
+  cash_out: number;
+  movements: CashMovement[];
+  expected_cash: number;
+}
+
+export interface CashSession {
+  id: string;
+  status: 'open' | 'closed';
+  opened_at: string;
+  opened_by_name: string | null;
+  opening_amount: number;
+  closed_at: string | null;
+  closed_by_name: string | null;
+  cash_sales: number | null;
+  cash_payments: number | null;
+  expected_cash: number | null;
+  counted_cash: number | null;
+  difference: number | null;
+  sales_count: number | null;
+  totals: {
+    sales: Record<string, CashMethodTotal>;
+    payments: Record<string, CashMethodTotal>;
+    movements?: CashMovement[];
+    cash_in?: number;
+    cash_out?: number;
+  } | null;
+  notes: string | null;
+}
+
+export async function getCurrentCashSession(
+  getToken: GetTokenFn,
+): Promise<{ session: CashSession | null; summary: CashSummary | null; is_owner: boolean }> {
+  return fetchAPI('/api/cash-sessions/current', getToken);
+}
+
+export async function openCashSession(openingAmount: number, getToken: GetTokenFn): Promise<CashSession> {
+  return fetchAPI('/api/cash-sessions/open', getToken, {
+    method: 'POST',
+    body: JSON.stringify({ opening_amount: openingAmount }),
+  });
+}
+
+export async function closeCashSession(
+  id: string,
+  countedCash: number,
+  notes: string,
+  getToken: GetTokenFn,
+): Promise<CashSession> {
+  return fetchAPI(`/api/cash-sessions/${id}/close`, getToken, {
+    method: 'POST',
+    body: JSON.stringify({ counted_cash: countedCash, notes }),
+  });
+}
+
+export async function addCashMovement(
+  sessionId: string,
+  movement: { kind: 'salida' | 'entrada'; amount: number; reason: string },
+  getToken: GetTokenFn,
+): Promise<CashMovement> {
+  return fetchAPI(`/api/cash-sessions/${sessionId}/movements`, getToken, {
+    method: 'POST',
+    body: JSON.stringify(movement),
+  });
+}
+
+export async function deleteCashMovement(
+  sessionId: string,
+  movementId: string,
+  getToken: GetTokenFn,
+): Promise<void> {
+  await fetchAPI(`/api/cash-sessions/${sessionId}/movements/${movementId}`, getToken, { method: 'DELETE' });
+}
+
+export async function getCashSessions(getToken: GetTokenFn, limit = 60): Promise<CashSession[]> {
+  return fetchAPI(`/api/cash-sessions?limit=${limit}`, getToken);
+}
+
 export async function getStoresHealth(
   getToken: GetTokenFn
 ): Promise<{ generatedAt: string; stores: StoreHealth[] }> {

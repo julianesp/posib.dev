@@ -17,6 +17,7 @@ import {
   Trash2,
   Upload,
   FileBarChart,
+  Wallet,
   Search,
   X,
 } from "lucide-react";
@@ -593,6 +594,12 @@ function SalesContent() {
 
         {/* Botones de Exportación e Importación */}
         <div className="flex flex-col sm:flex-row gap-2">
+          <Link href="/dashboard/sales/caja">
+            <Button variant="outline" className="text-sm w-full">
+              <Wallet className="mr-2 h-4 w-4" />
+              Cierres de caja
+            </Button>
+          </Link>
           <Link href="/dashboard/sales/informes">
             <Button variant="outline" className="text-sm w-full">
               <FileBarChart className="mr-2 h-4 w-4" />

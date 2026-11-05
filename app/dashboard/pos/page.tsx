@@ -65,6 +65,7 @@ import Swal from "@/lib/sweetalert";
 import { BarcodeScannerZXing } from "@/components/products/barcode-scanner-zxing";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
 import { UnitSelectorModal } from "@/components/pos/unit-selector-modal";
+import { CashRegisterControl } from "@/components/pos/cash-register-control";
 import Link from "next/link";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
 import {
@@ -2029,6 +2030,9 @@ export default function POSPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}
         <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
+          {/* Apertura y cierre de caja */}
+          <CashRegisterControl />
+
           {/* Búsqueda por código de barras */}
           <Card
             data-guide="pos-scan"
