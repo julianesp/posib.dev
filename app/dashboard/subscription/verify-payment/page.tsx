@@ -135,10 +135,6 @@ export default function VerifyPaymentPage() {
                   {result.type === 'success' && result.data.subscription && (
                     <div className="mt-2 text-sm text-green-800">
                       <p>Plan: {result.data.subscription.planId}</p>
-                      <p>Estado: {result.data.subscription.status}</p>
-                      {result.data.subscription.hasAIAddon && (
-                        <p>✨ Add-on de IA activado</p>
-                      )}
                     </div>
                   )}
                   {result.type === 'success' && (

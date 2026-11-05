@@ -125,6 +125,52 @@ app.get('/all', async (c) => {
  * PUT /api/user-profiles/:id
  * Actualizar perfil de usuario
  */
+// Campos de suscripción, complementos y fidelización que el tendero no puede
+// escribir por el PUT (ver billingFieldsForbiddenForOwner).
+const BILLING_FIELDS = [
+  'subscription_status',
+  'trial_start_date',
+  'trial_end_date',
+  'subscription_id',
+  'plan_id',
+  'last_payment_date',
+  'next_billing_date',
+  'loyalty_points',
+  'loyalty_tier',
+  'has_ai_addon',
+  'has_store_addon',
+  'has_email_addon',
+  'ai_addon_expires_at',
+  'store_addon_expires_at',
+  'email_addon_expires_at',
+] as const;
+
+const MAX_TRIAL_MS = 31 * 24 * 60 * 60 * 1000;
+
+/**
+ * Devuelve los campos de cobro del body que un usuario que no es superadmin NO
+ * puede escribir. Solo se permiten dos cambios que el front hace solo y que no
+ * dan acceso gratis (lib/cloudflare-subscription-helpers.ts):
+ *  - marcar la propia suscripción como 'expired';
+ *  - fijar trial_end_date cuando aún no existe, a no más de 31 días.
+ */
+export function billingFieldsForbiddenForOwner(
+  body: Record<string, unknown>,
+  current: { trial_end_date?: string | null }
+): string[] {
+  return BILLING_FIELDS.filter((field) => {
+    const value = body[field];
+    if (value === undefined) return false;
+    if (field === 'subscription_status') return value !== 'expired';
+    if (field === 'trial_end_date') {
+      if (current.trial_end_date) return true;
+      const end = new Date(String(value)).getTime();
+      return Number.isNaN(end) || end > Date.now() + MAX_TRIAL_MS;
+    }
+    return true;
+  });
+}
+
 app.put('/:id', async (c) => {
   try {
     const id = c.req.param('id');
@@ -170,6 +216,22 @@ app.put('/:id', async (c) => {
         error: 'Unauthorized - Solo puedes actualizar tu propio perfil o ser superadmin',
         data: null
       }, 403);
+    }
+
+    // Campos de cobro: solo los cambian el superadmin y las llamadas internas
+    // (webhook de ePayco vía apply-payment, con X-Webhook-Secret). Antes el
+    // tendero —o un empleado con su token— podía activarse el plan o los
+    // complementos sin pagar con un PUT directo.
+    if (!isSuperAdmin) {
+      const forbidden = billingFieldsForbiddenForOwner(body, currentProfile);
+      if (forbidden.length > 0) {
+        return c.json<APIResponse<null>>({
+          success: false,
+          error: `No puedes modificar estos campos: ${forbidden.join(', ')}`,
+          code: 'BILLING_FIELDS_FORBIDDEN',
+          data: null,
+        } as APIResponse<null>, 403);
+      }
     }
 
     // La tienda online solo se enciende con un número de Nequi: sin él el

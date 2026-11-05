@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getTransactionStatus } from '@/lib/epayco';
-import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
+import { getUserProfile } from '@/lib/cloudflare-api';
+import { activateEPaycoPayment } from '@/lib/epayco-activation';
 
 /**
  * Endpoint para verificar manualmente si un pago fue aprobado
@@ -64,98 +65,48 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Verificar que el monto sea correcto
-    const amountCOP = amount;
-    if (amountCOP !== 24900 && amountCOP !== 29900 && amountCOP !== 9900 && amountCOP !== 39800 && amountCOP !== 5000 && amountCOP !== 34900 && amountCOP !== 10000) {
+    // El pago debe ser de ESTE perfil: ePayco devuelve el userProfileId y el
+    // planId en los extras que posib manda al crear el checkout. Antes se
+    // activaba con cualquier transacción aprobada (incluso de otra tienda) y
+    // el plan se adivinaba por el monto.
+    const payerProfileId = transactionData.x_extra1;
+    const planId = transactionData.x_extra2;
+    if (!payerProfileId || !planId) {
       return NextResponse.json({
         success: false,
-        message: `Monto incorrecto: $${amountCOP}. Se esperaba $24,900, $9,900, $5,000 u otro monto válido`,
+        message: 'Este pago no trae los datos de la cuenta. Escríbenos por WhatsApp con la referencia y lo activamos.',
         canActivate: false,
       });
     }
-
-    // Determinar el plan
-    let planId = 'basic-monthly';
-    let hasAIAddon = false;
-
-    if (amountCOP === 24900 || amountCOP === 29900) {
-      // Plan básico (24900 actual; 29900 por compatibilidad con pagos anteriores)
-      planId = 'basic-monthly';
-    } else if (amountCOP === 9900) {
-      // precio anterior del addon IA (compatibilidad)
-      planId = 'ai-addon-monthly';
-      hasAIAddon = true;
-    } else if (amountCOP === 5000) {
-      // addon IA o Email Marketing al precio actual
-      planId = 'ai-addon-monthly';
-      hasAIAddon = true;
-    } else if (amountCOP === 10000) {
-      // ambos addons (IA + Email) al precio actual
-      planId = 'ai-addon-monthly';
-      hasAIAddon = true;
-    } else if (amountCOP === 39800) {
-      planId = 'basic-monthly';
-      hasAIAddon = true;
-    } else if (amountCOP === 34900) {
-      // plan básico + addon al precio actual
-      planId = 'basic-monthly';
-      hasAIAddon = true;
+    if (payerProfileId !== userProfile.id) {
+      return NextResponse.json({
+        success: false,
+        message: 'Este pago pertenece a otra cuenta.',
+        canActivate: false,
+      }, { status: 403 });
     }
 
-    // Activar la suscripción
-    const now = new Date();
-    const nextBillingDate = new Date(now);
-    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-
-    await updateUserProfile(userProfile.id, {
-      subscription_status: 'active',
-      plan_id: planId,
-      has_ai_addon: hasAIAddon,
-      last_payment_date: now.toISOString(),
-      next_billing_date: nextBillingDate.toISOString(),
-      trial_start_date: undefined,
-      trial_end_date: undefined,
-    }, getToken);
-
-    // También crear el registro de transacción
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
-      const token = await getToken();
-
-      await fetch(`${apiUrl}/api/payment-transactions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_profile_id: userProfile.id,
-          epayco_transaction_id: transactionId,
-          epayco_ref_payco: transactionData.x_ref_payco || '',
-          amount: amountCOP,
-          currency: 'COP',
-          status: 'Aceptada',
-          reference: reference || `MANUAL-${transactionId}`,
-          approval_code: transactionData.x_approval_code || '',
-        }),
-      });
-    } catch (error) {
-      console.error('Error creating transaction record:', error);
-      // No falla si no se puede crear el registro
-    }
+    // Misma activación que el webhook y payment-status: el Worker suma el mes
+    // y registra la transacción, idempotente por ref_payco.
+    const apiUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
+    await activateEPaycoPayment({
+      apiUrl,
+      userProfileId: userProfile.id,
+      planId,
+      transactionId: transactionData.x_transaction_id,
+      refPayco: transactionData.x_ref_payco || transactionId,
+      amount,
+      currency: transactionData.x_currency_code,
+      invoice: reference,
+    });
 
     return NextResponse.json({
       success: true,
-      message: '¡Suscripción activada exitosamente!',
-      subscription: {
-        status: 'active',
-        planId,
-        hasAIAddon,
-        nextBillingDate: nextBillingDate.toISOString(),
-      },
+      message: '¡Pago aplicado a tu cuenta!',
+      subscription: { planId },
       transaction: {
         id: transactionId,
-        amount: amountCOP,
+        amount,
         status,
       },
     });
