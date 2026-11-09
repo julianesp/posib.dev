@@ -1,262 +1,139 @@
-# Sistema POS - Gestión Completa para Tiendas
+# posib.dev
 
-Sistema integral de punto de venta y gestión de inventario construido con Next.js 15, Firebase/Firestore y Clerk.
+Sistema de punto de venta (POS) en la nube para tiendas de barrio en Colombia. Es un SaaS multi-tienda: cada tendero tiene su propia tienda, con inventario, ventas, fiado, reportes y, si quiere, una tienda online pública.
 
-## Características Principales
+🌐 [posib.dev](https://posib.dev)
 
-- Sistema de Punto de Venta (POS) con lectura de código de barras
-- Gestión completa de productos con categorías y proveedores
-- Control de inventario con alertas de stock bajo
-- Sistema de facturación y ventas
-- Reportes diarios, semanales y mensuales
-- Ofertas automáticas para productos próximos a vencer
-- Gestión de clientes con puntos de fidelidad
-- Aplicación Web Progresiva (PWA)
-- Autenticación con múltiples roles (admin, cajero, cliente)
+## Funcionalidades
 
-## Configuración Inicial
+**Punto de venta**
+- Venta con lector de código de barras USB o la cámara del celular
+- Carrito compacto con "Procesar Venta" siempre visible
+- Pago en efectivo, tarjeta, transferencia, Nequi o **fiado**
+- **Cierre de caja**: apertura con base, entradas y salidas de efectivo y cuadre al cerrar
+- Modo **offline**: se puede vender sin internet y las ventas se sincronizan después
 
-### 1. Instalar Dependencias
+**Inventario y productos**
+- Productos con categorías, código de barras, precios y stock
+- Alertas de stock bajo y de productos próximos a vencer, con ofertas de un clic
+- Proveedores, órdenes de compra y estadísticas de compras
+- Importación de productos y ventas desde **Siigo**
+- Rentabilidad por producto
+
+**Clientes**
+- Fiado (cuentas por cobrar) con cupo, abonos y recordatorios de deuda
+- Programa de puntos de fidelidad
+
+**Reportes e IA**
+- Dashboard con métricas del día, la semana y el mes
+- Informe mensual de ventas en PDF y reportes automáticos por correo
+- Análisis con IA (Gemini): predicciones, recomendaciones y revisión del catálogo
+- Exportación a Excel y respaldos
+
+**Tienda online** (complemento)
+- Catálogo público por tienda en `/store/[slug]`
+- Carrito, zonas de envío y pago por Nequi con comprobante en PDF
+- Pedidos que llegan por WhatsApp y Telegram y se gestionan en "Pedidos web"
+
+**Otros**
+- Equipo de trabajo con roles (`admin`, `cajero` y permisos personalizados)
+- Facturación electrónica DIAN y aviso de topes de facturación
+- Email marketing
+- Tema claro/oscuro automático según la hora y color propio para cada tienda
+- PWA instalable en el celular, con notificaciones
+- Panel de superadministrador para gestionar todas las tiendas
+
+## Planes
+
+| Plan | Precio mensual |
+|---|---|
+| Tienda / Minimercado (incluye IA y email marketing) | $24.900 COP |
+| Complemento Tienda Online | $14.900 COP |
+
+Todas las cuentas nuevas tienen **30 días de prueba gratis**. Los pagos se procesan con **ePayco**. Los precios se definen en `lib/business-types.ts` y `lib/epayco.ts`.
+
+## Arquitectura
+
+```
+Navegador / PWA
+      │
+      ▼
+Next.js 16 (App Router) ── Clerk (autenticación)
+      │  JWT de Clerk
+      ▼
+Cloudflare Worker (Hono) ── Cloudflare D1 (SQLite)
+      │
+      ├─ Resend (correos)       ├─ Cloudinary (imágenes)
+      ├─ ePayco (pagos)         └─ Gemini (IA)
+```
+
+- **Frontend** (raíz del repo): Next.js 16, React 19, Tailwind CSS v4, Radix UI. El middleware de Clerk está en `proxy.ts`.
+- **Backend** (`cloudflare-migration/`): API en un Cloudflare Worker con Hono y base de datos D1. Se despliega por separado con `wrangler`. También tiene el cron horario que envía reportes, alertas de stock y recordatorios.
+- El cliente HTTP del front está en `lib/cloudflare-api.ts`. Cada petición lleva el token de Clerk y la tienda activa.
+
+## Desarrollo local
+
+Requisitos: Node.js 22 y **pnpm**. No uses npm ni yarn en la raíz, porque desajustan el lockfile.
 
 ```bash
-npm install
+pnpm install
+cp .env.example .env.local   # y completa los valores
+pnpm dev                     # http://localhost:3000
 ```
 
-### 2. Configurar Variables de Entorno
+### Variables de entorno
 
-Copia el archivo `.env.example` a `.env.local` y configura:
+| Grupo | Variables |
+|---|---|
+| Clerk | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL` |
+| App | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_URL`, `NEXT_PUBLIC_CLOUDFLARE_API_URL` |
+| ePayco | `EPAYCO_P_CUST_ID_CLIENTE`, `NEXT_PUBLIC_EPAYCO_PUBLIC_KEY`, `EPAYCO_PRIVATE_KEY`, `EPAYCO_P_KEY`, `NEXT_PUBLIC_EPAYCO_ENV` |
+| Cloudinary | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `NEXT_PUBLIC_CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
+| Servicios | `GEMINI_API_KEY`, `RESEND_API_KEY`, `CRON_SECRET` |
+
+`.env.example` tiene la lista completa con comentarios.
+
+> El Worker debe usar las **mismas llaves de Clerk** que el front. Si no coinciden, aparecen errores falsos de "Unauthorized" o "suscripción vencida".
+
+### Worker (backend)
 
 ```bash
-# Clerk Authentication (obtener en https://clerk.com)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-
-# Firebase (obtener en https://console.firebase.google.com)
-NEXT_PUBLIC_FIREBASE_API_KEY=tu-api-key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu-proyecto.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=tu-sender-id
-NEXT_PUBLIC_FIREBASE_APP_ID=tu-app-id
+cd cloudflare-migration
+npm ci
+npx wrangler dev       # local
+npx wrangler deploy    # producción
 ```
 
-### 3. Configurar Firebase/Firestore
+Consulta `cloudflare-migration/DEPLOYMENT_GUIDE.md` para los secretos y las migraciones de D1.
 
-1. Ve a la [Consola de Firebase](https://console.firebase.google.com)
-2. Crea un nuevo proyecto o usa uno existente
-3. Habilita Firestore Database en modo producción
-4. Configura las reglas de seguridad según tus necesidades
-5. Las colecciones se crearán automáticamente al agregar el primer documento
-
-### 4. Ejecutar en Modo Desarrollo
+## Comandos
 
 ```bash
-npm run dev
+pnpm dev            # servidor de desarrollo (Turbopack)
+pnpm build          # build de producción
+pnpm lint           # ESLint
+pnpm test           # pruebas Jest (lógica, UI y rutas del Worker)
+pnpm e2e            # pruebas end-to-end con Playwright
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+GitHub Actions ejecuta `pnpm test` en cada push y PR a `main`.
 
-## Estructura del Proyecto
+## Estructura
 
 ```
-tienda-pos/
-├── app/
-│   ├── dashboard/          # Páginas del dashboard
-│   │   ├── pos/           # Punto de venta
-│   │   ├── products/      # Gestión de productos
-│   │   ├── suppliers/     # Gestión de proveedores
-│   │   ├── customers/     # Gestión de clientes
-│   │   ├── sales/         # Historial de ventas
-│   │   └── offers/        # Sistema de ofertas
-│   ├── sign-in/           # Inicio de sesión
-│   └── sign-up/           # Registro
-├── components/            # Componentes reutilizables
-├── lib/                   # Utilidades y configuración
-│   ├── firebase.ts       # Configuración de Firebase
-│   ├── firestore-helpers.ts  # Funciones helper para Firestore
-│   └── types.ts          # Tipos TypeScript
-└── supabase/             # Esquemas de referencia (legacy)
+app/
+  dashboard/        # panel del tendero: pos, products, inventory, customers,
+                    # debtors, suppliers, sales, offers, analytics, rentabilidad,
+                    # web-orders, team, subscription, superadmin…
+  store/[slug]/     # tienda online pública
+  api/              # webhooks (ePayco), IA, reportes, facturas DIAN, subidas
+components/         # componentes de UI
+lib/                # cliente de la API, helpers de negocio y tipos
+cloudflare-migration/  # Worker de Cloudflare (Hono + D1)
+tests/ , e2e/       # pruebas Jest y Playwright
+docs/               # guías (reportes automáticos, tours, DIAN)
 ```
 
-## Guía de Uso
+## Licencia
 
-### Punto de Venta (POS)
-
-1. Ve a "Punto de Venta" en el dashboard
-2. Conecta tu lector de código de barras USB
-3. Escanea productos o búscalos manualmente
-4. Selecciona método de pago (efectivo, tarjeta, transferencia)
-5. Procesa la venta
-
-**Tip**: El lector de código de barras funciona como un teclado. El cursor se enfoca automáticamente en el campo correcto.
-
-### Gestión de Productos
-
-- **Crear**: Agrega nuevos productos con código de barras, precios, stock
-- **Editar**: Actualiza información y precios
-- **Categorías**: Organiza productos por categorías
-- **Alertas**: Recibe notificaciones de stock bajo
-
-### Sistema de Ofertas
-
-El sistema detecta automáticamente productos próximos a vencer (15 días o menos) y te permite crear ofertas con un clic:
-- 10% de descuento
-- 20% de descuento
-- 30% de descuento
-
-### Reportes
-
-Accede a reportes de ventas:
-- **Hoy**: Ventas del día actual
-- **Semana**: Últimos 7 días
-- **Mes**: Último mes
-
-Visualiza métricas como:
-- Total de ventas
-- Monto total
-- Productos más vendidos
-- Métodos de pago utilizados
-
-## Tecnologías
-
-- **Next.js 15** - Framework React
-- **Firebase/Firestore** - Base de datos NoSQL en tiempo real
-- **Clerk** - Autenticación
-- **Tailwind CSS** - Estilos
-- **TypeScript** - Tipado estático
-- **PWA** - Aplicación web progresiva
-
-## Características PWA
-
-La aplicación se puede instalar en dispositivos móviles:
-
-1. Abre la app en Chrome/Safari
-2. Menú > "Agregar a pantalla de inicio"
-3. Usa como app nativa
-
-## Sistema de Super Administrador
-
-El sistema incluye un panel de Super Administrador para gestionar el SaaS multi-tenant:
-
-### Características del Panel de Super Admin
-
-- **Dashboard de Métricas**:
-  - Total de tiendas registradas
-  - Tiendas activas con suscripción pagada
-  - Tiendas en período de prueba
-  - Ingresos mensuales estimados
-
-- **Gestión de Tiendas**:
-  - Ver lista completa de todas las tiendas
-  - Activar/Suspender suscripciones de tiendas
-  - Promover usuarios a Super Admin
-  - Buscar tiendas por nombre o email
-
-### Configuración de Super Admin
-
-El Super Admin se configura mediante la variable de entorno `SUPER_ADMIN_EMAIL` en tu archivo `.env.local`:
-
-```bash
-SUPER_ADMIN_EMAIL=admin@neurai.dev
-```
-
-⚠️ **IMPORTANTE**: Cambia este email por el tuyo antes de desplegar a producción.
-
-#### Promover manualmente a Super Admin
-
-Existen 3 formas de promover un usuario:
-
-1. **Automática**: El usuario con el email configurado en `SUPER_ADMIN_EMAIL` es automáticamente Super Admin al registrarse
-2. **Desde el Panel**: Los Super Admins pueden promover otros usuarios desde el panel usando el botón con ícono de escudo
-3. **Por API**: Llamar a `/api/admin/set-superadmin` con el email del usuario
-
-#### Si tu cuenta ya existía antes de configurar el email
-
-Si ya tenías una cuenta registrada y luego configuraste `SUPER_ADMIN_EMAIL`, necesitas forzar la actualización:
-
-**Opción 1: Usar la API directamente**
-```bash
-curl -X POST http://localhost:3001/api/user/force-superadmin-update \
-  -H "Content-Type: application/json" \
-  --cookie "tu-cookie-de-sesion"
-```
-
-**Opción 2: Desde el navegador**
-1. Abre la consola del navegador (F12)
-2. Pega y ejecuta:
-```javascript
-fetch('/api/user/force-superadmin-update', { method: 'POST' })
-  .then(r => r.json())
-  .then(console.log)
-```
-3. Recarga la página
-
-### Beneficios del Super Admin
-
-- ✅ Acceso ilimitado sin necesidad de suscripción
-- ✅ No aparece el banner de trial o suscripción expirada
-- ✅ Acceso al panel de Super Admin
-- ✅ Puede gestionar todas las tiendas del sistema
-
-## Sistema de Suscripciones
-
-El sistema incluye un modelo de suscripción con prueba gratuita:
-
-### Período de Prueba
-
-- **30 días de prueba gratuita** para todos los nuevos usuarios
-- Acceso completo a todas las funciones durante el período de prueba
-- Banner informativo mostrando días restantes
-- Sin necesidad de tarjeta de crédito para empezar
-
-### Planes Disponibles
-
-1. **Plan Básico** - $50,000 COP/mes
-   - Punto de venta completo
-   - Gestión de inventario
-   - Hasta 1000 productos
-   - Reportes básicos
-   - Soporte por email
-
-2. **Plan Profesional** - $100,000 COP/mes
-   - Todo lo del Plan Básico
-   - Productos ilimitados
-   - Múltiples usuarios (hasta 5)
-   - Reportes avanzados
-   - Integración con DIAN
-   - Soporte prioritario
-
-### Métodos de Pago (Wompi)
-
-El sistema acepta los siguientes métodos de pago:
-
-- 💜 **Nequi** - Billetera digital
-- 💳 **Tarjetas** - Visa, Mastercard, Amex (incluye Nu/Nubank)
-- 🏦 **PSE** - Transferencias bancarias
-- 🟡 **Bancolombia** - Botón y transferencias
-
-### Configuración de Wompi
-
-1. Crea una cuenta en [Wompi Comercios](https://comercios.wompi.co/register)
-2. Obtén tus credenciales en el dashboard
-3. Configura las variables de entorno (ver `.env.example`)
-4. Configura el webhook: `https://tu-dominio.com/api/webhooks/wompi`
-
-Para más detalles, consulta la guía completa en `.env.example`.
-
-## Próximas Características
-
-- [ ] Envío a domicilio
-- [ ] Integración con DIAN (Colombia)
-- [ ] Impresión de facturas
-- [ ] Exportar reportes a PDF/Excel
-- [ ] Notificaciones push
-- [ ] Suscripciones anuales con descuento
-
-## Soporte
-
-Para reportar problemas o solicitar características, contacta al desarrollador.
-
----
-
-Desarrollado para optimizar la gestión de tiendas en Colombia
+[MIT](LICENSE)
