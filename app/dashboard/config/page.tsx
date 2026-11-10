@@ -39,6 +39,7 @@ import { DebtRemindersConfig } from "@/components/config/debt-reminders-config";
 import { PartnershipConfig } from "@/components/config/partnership-config";
 import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup-config";
 import { AccentConfig } from "@/components/config/accent-config";
+import { WelcomeTourConfig } from "@/components/dashboard/welcome-tour";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
 import { landingConfig } from "@/lib/landing-config";
 import { getUserProfile, updateUserProfile, type UserProfile } from "@/lib/cloudflare-api";
@@ -231,6 +232,11 @@ export default function ConfigPage() {
       {/* Color del sistema elegido por el tendero */}
       <div id="color-sistema">
         <AccentConfig />
+      </div>
+
+      {/* Presentación de bienvenida: activarla, apagarla o verla de nuevo */}
+      <div id="presentacion-bienvenida">
+        <WelcomeTourConfig />
       </div>
 
       {/* Buzón de Sugerencias */}

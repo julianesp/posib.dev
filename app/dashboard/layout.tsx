@@ -9,6 +9,7 @@ import { StoreQuickAccess } from "@/components/dashboard/store-quick-access";
 import { PWAInstallPrompt } from "@/components/dashboard/pwa-install-prompt";
 import { MonthlyReportModal } from "@/components/dashboard/monthly-report-modal";
 import { NewInterfaceAnnouncement } from "@/components/dashboard/new-interface-announcement";
+import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ConnectionErrorModal } from "@/components/subscription/connection-error-modal";
@@ -508,6 +509,9 @@ function DashboardLayoutInner({
         {!loading && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && (
           <NewInterfaceAnnouncement />
         )}
+
+        {/* Presentación de beneficios para usuarios nuevos (se apaga con "No mostrar" o en Configuración). */}
+        {!loading && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && <WelcomeTour />}
       </div>
       </GuideProvider>
     </OfflineProvider>
