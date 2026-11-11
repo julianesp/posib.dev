@@ -2895,7 +2895,7 @@ export default function POSPage() {
                       <div
                         key={`${item.product.id}-${item.isUnitSale ? "unit" : "package"}`}
                         className={cn(
-                          "flex items-center gap-2 rounded-md border px-2 py-1",
+                          "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border px-2 py-1 md:flex-nowrap",
                           item.hasOffer
                             ? "bg-brand-light/50 border-brand/60"
                             : "border-gray-300",
@@ -2904,7 +2904,7 @@ export default function POSPage() {
                         )}
                       >
                         <p
-                          className="flex-1 min-w-0 truncate text-sm font-medium"
+                          className="w-full min-w-0 text-sm font-medium leading-snug md:w-auto md:flex-1 md:truncate"
                           title={item.product.name}
                         >
                           {item.product.name}
@@ -2984,7 +2984,7 @@ export default function POSPage() {
                             <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                        <span className="w-20 text-right font-num text-sm font-bold text-brand whitespace-nowrap">
+                        <span className="flex-1 text-right font-num text-sm font-bold text-brand whitespace-nowrap md:w-20 md:flex-none">
                           {formatCurrency(price * item.quantity)}
                         </span>
                         <button
