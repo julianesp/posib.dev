@@ -640,8 +640,25 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           isCollapsed ? "justify-center px-3" : "justify-between px-6",
         )}
       >
+        {/* Botón de colapsar/expandir (a la izquierda): borde y fondo con el color de la tienda */}
+        <button
+          type="button"
+          onClick={toggleCollapse}
+          className="sidebar-collapse-btn shrink-0 p-2 rounded-xl active:scale-90"
+          aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          aria-expanded={!isCollapsed}
+          title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+        >
+          <ChevronLeft
+            className={cn(
+              "h-5 w-5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              isCollapsed && "rotate-180",
+            )}
+          />
+        </button>
+
         {!collapsedView && (
-          <div className="sidebar-label-in min-w-0 overflow-hidden">
+          <div className="sidebar-label-in ml-auto min-w-0 overflow-hidden">
             {isSuperAdmin ? (
               <h1 className="text-xl font-bold">Admin Panel</h1>
             ) : (
@@ -656,26 +673,6 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
             )}
           </div>
         )}
-
-        {/* Botón de colapsar/expandir: borde y fondo con el color de la tienda */}
-        <button
-          type="button"
-          onClick={toggleCollapse}
-          className={cn(
-            "sidebar-collapse-btn shrink-0 p-2 rounded-xl active:scale-90",
-            !collapsedView && "ml-auto",
-          )}
-          aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-          aria-expanded={!isCollapsed}
-          title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-        >
-          <ChevronLeft
-            className={cn(
-              "h-5 w-5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-              isCollapsed && "rotate-180",
-            )}
-          />
-        </button>
       </div>
 
       {/* Header móvil */}

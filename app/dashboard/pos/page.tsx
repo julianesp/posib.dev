@@ -2340,7 +2340,7 @@ export default function POSPage() {
                     return (
                       <Card
                         key={product.id}
-                        className={`cursor-pointer hover:border-brand transition-colors relative overflow-hidden ${hasOffer ? "border-2 border-brand/80" : ""}`}
+                        className={`flex flex-col cursor-pointer hover:border-brand transition-colors relative overflow-hidden ${hasOffer ? "border-2 border-brand/80" : ""}`}
                         onClick={() => addToCart(product)}
                       >
                         {floatingProducts.has(product.id) && (
@@ -2351,9 +2351,9 @@ export default function POSPage() {
                             +1
                           </div>
                         )}
-                        <CardContent className="p-2 md:p-4">
-                          {/* Imagen del producto */}
-                          <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
+                        <CardContent className="flex flex-1 flex-col p-0">
+                          {/* Imagen del producto: de borde a borde de la tarjeta */}
+                          <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
                             {hasOffer && (
                               <div className="absolute top-0 right-0 z-10 bg-brand text-white text-xs font-bold px-2 py-1 rounded-bl-md">
                                 -{offer.discount_percentage}%
@@ -2365,7 +2365,7 @@ export default function POSPage() {
                                 alt={product.name}
                                 fill
                                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                className="object-contain p-2"
+                                className="object-cover"
                                 loading="lazy"
                               />
                             ) : (
@@ -2374,59 +2374,62 @@ export default function POSPage() {
                               </div>
                             )}
                           </div>
-                          <h4 className="font-semibold text-xs md:text-sm mb-1 line-clamp-2 text-gray-950">
-                            {product.name}
-                          </h4>
-                          <div>
-                            {hasOffer ? (
-                              <>
-                                <p className="text-xs text-gray-900 line-through">
-                                  {formatCurrency(originalPrice)}
+                          {/* Texto pegado abajo de la tarjeta (mt-auto) */}
+                          <div className="mt-auto px-2 pb-2 pt-1.5 md:px-2.5">
+                            <h4 className="font-semibold text-[11px] md:text-xs leading-tight mb-0.5 line-clamp-2 text-gray-950">
+                              {product.name}
+                            </h4>
+                            <div>
+                              {hasOffer ? (
+                                <>
+                                  <p className="text-[11px] text-gray-900 line-through leading-tight">
+                                    {formatCurrency(originalPrice)}
+                                  </p>
+                                  <p className="font-num text-sm md:text-base font-bold leading-tight text-gray-950">
+                                    {formatCurrency(discountedPrice)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="font-num text-sm md:text-base font-bold leading-tight text-gray-950">
+                                  {formatCurrency(product.sale_price)}
                                 </p>
-                                <p className="font-num text-sm md:text-lg font-bold text-gray-950">
-                                  {formatCurrency(discountedPrice)}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="font-num text-sm md:text-lg font-bold text-gray-950">
-                                {formatCurrency(product.sale_price)}
-                              </p>
-                            )}
+                              )}
+                            </div>
+                            <p className="text-[11px] md:text-xs leading-tight font-medium text-gray-900">
+                              Disponible:{" "}
+                              {!!product.sell_by_unit
+                                ? (() => {
+                                    // IMPORTANTE: El stock está en PAQUETES para TODOS los productos
+                                    const unitsPerPackage =
+                                      product.units_per_package || 1;
+                                    const packageName =
+                                      product.package_name || "paquete";
+                                    const unitName =
+                                      product.unit_name || "unidad";
+
+                                    // Calcular unidades totales y desglosar
+                                    const totalUnits = Math.floor(
+                                      product.stock * unitsPerPackage,
+                                    );
+                                    const fullPackages = Math.floor(
+                                      product.stock,
+                                    );
+                                    const remainingUnits =
+                                      totalUnits - fullPackages * unitsPerPackage;
+                                    const packageNamePlural =
+                                      fullPackages === 1
+                                        ? packageName
+                                        : `${packageName}s`;
+                                    const unitNamePlural =
+                                      remainingUnits === 1
+                                        ? unitName
+                                        : `${unitName}es`;
+
+                                    return `${totalUnits} ${unitName}${totalUnits === 1 ? "" : "es"} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ""})`;
+                                  })()
+                                : `${Math.round(product.stock)} ${product.package_name || "unidades"}`}
+                            </p>
                           </div>
-                          <p className="text-xs md:text-[13px] font-medium text-gray-900">
-                            Disponible:{" "}
-                            {!!product.sell_by_unit
-                              ? (() => {
-                                  // IMPORTANTE: El stock está en PAQUETES para TODOS los productos
-                                  const unitsPerPackage =
-                                    product.units_per_package || 1;
-                                  const packageName =
-                                    product.package_name || "paquete";
-                                  const unitName =
-                                    product.unit_name || "unidad";
-
-                                  // Calcular unidades totales y desglosar
-                                  const totalUnits = Math.floor(
-                                    product.stock * unitsPerPackage,
-                                  );
-                                  const fullPackages = Math.floor(
-                                    product.stock,
-                                  );
-                                  const remainingUnits =
-                                    totalUnits - fullPackages * unitsPerPackage;
-                                  const packageNamePlural =
-                                    fullPackages === 1
-                                      ? packageName
-                                      : `${packageName}s`;
-                                  const unitNamePlural =
-                                    remainingUnits === 1
-                                      ? unitName
-                                      : `${unitName}es`;
-
-                                  return `${totalUnits} ${unitName}${totalUnits === 1 ? "" : "es"} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ""})`;
-                                })()
-                              : `${Math.round(product.stock)} ${product.package_name || "unidades"}`}
-                          </p>
                         </CardContent>
                       </Card>
                     );
