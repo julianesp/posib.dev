@@ -1197,7 +1197,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         </CardContent>
       </Card>
 
-      <div className="flex gap-4">
+      {/* Barra fija abajo: Guardar/Cancelar siempre a la vista, sin tener que
+          bajar hasta el final de un formulario largo. Los márgenes negativos
+          la extienden de borde a borde del área con scroll (<main>). */}
+      <div className="sticky bottom-0 z-20 -mx-4 flex gap-4 border-t border-gray-200 bg-[var(--shell-canvas)]/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
         <Button type="submit" disabled={loading}>
           {loading ? "Guardando..." : productId ? "Actualizar" : "Crear"}{" "}
           {businessType.vocabulary.itemSingular}
