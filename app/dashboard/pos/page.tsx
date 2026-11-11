@@ -185,6 +185,8 @@ export default function POSPage() {
     cost_price: "",
     stock: "",
   });
+  // "Sin inventario": producto suelto (sin código) que se vende sin llevar stock
+  const [quickNoInventory, setQuickNoInventory] = useState(false);
 
   // Estado para animación del carrito al agregar producto
   const [cartBump, setCartBump] = useState(false);
@@ -192,6 +194,45 @@ export default function POSPage() {
     new Set(),
   );
   const cartIconRef = useRef<HTMLDivElement>(null);
+  // En escritorio la tarjeta del carrito mide exactamente lo que queda de
+  // pantalla debajo de su posición actual, para que "Procesar Venta" quede
+  // pegado abajo y siempre visible (medido, no calculado a ojo con vh).
+  const cartCardRef = useRef<HTMLDivElement>(null);
+  const [cartCardHeight, setCartCardHeight] = useState<number | undefined>();
+  useEffect(() => {
+    const STICKY_TOP = 8; // = lg:top-2
+    const update = () => {
+      const el = cartCardRef.current;
+      if (!el || !window.matchMedia("(min-width: 1024px)").matches) {
+        setCartCardHeight(undefined);
+        return;
+      }
+      const top = Math.max(el.getBoundingClientRect().top, STICKY_TOP);
+      setCartCardHeight(
+        Math.max(360, Math.floor(window.innerHeight - top - 16)),
+      );
+    };
+    const frame = requestAnimationFrame(update);
+    window.addEventListener("resize", update);
+    // El scroll ocurre dentro de <main>: no burbujea, se escucha en captura
+    window.addEventListener("scroll", update, true);
+    // La posición de la tarjeta también cambia sin scroll ni resize (avisos
+    // que aparecen arriba, carga del catálogo, cambio de pestaña...): se
+    // vuelve a medir al cambiar el tamaño del contenido y cada medio segundo.
+    const main = cartCardRef.current?.closest("main");
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    if (main) observer?.observe(main);
+    observer?.observe(document.body);
+    const interval = window.setInterval(update, 500);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearInterval(interval);
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, []);
 
   // Ventas en espera (pestañas). La pestaña activa vive en los estados de arriba
   // (cart, selectedCustomer, paymentMethod...); heldSales guarda las demás.
@@ -967,8 +1008,9 @@ export default function POSPage() {
   // Abre el modal de registro rápido, precargando el código de barras
   // (cuando viene del escáner) o el nombre (cuando viene de la búsqueda).
   const openQuickRegister = (
-    opts: { barcode?: string; name?: string } = {},
+    opts: { barcode?: string; name?: string; noInventory?: boolean } = {},
   ) => {
+    setQuickNoInventory(!!opts.noInventory);
     setQuickRegisterData({
       barcode: opts.barcode || "",
       name: opts.name || "",
@@ -987,9 +1029,12 @@ export default function POSPage() {
     const costPrice = quickRegisterData.cost_price.trim()
       ? parseFloat(quickRegisterData.cost_price)
       : 0;
-    const stock = quickRegisterData.stock.trim()
-      ? parseFloat(quickRegisterData.stock)
-      : 1;
+    const noInventory = quickNoInventory;
+    const stock = noInventory
+      ? 0
+      : quickRegisterData.stock.trim()
+        ? parseFloat(quickRegisterData.stock)
+        : 1;
 
     if (!name) {
       Swal.warning("Nombre requerido", "Ingresa el nombre del producto");
@@ -1009,9 +1054,34 @@ export default function POSPage() {
       );
       return;
     }
-    if (isNaN(stock) || stock <= 0) {
+    if (!noInventory && (isNaN(stock) || stock <= 0)) {
       Swal.warning("Stock inválido", "La cantidad debe ser mayor a cero");
       return;
+    }
+
+    // Venta rápida: si ya existe un producto sin inventario con ese nombre se
+    // reutiliza, para no llenar el catálogo de duplicados ("mecato", "mecato"...).
+    if (noInventory) {
+      const existing = products.find(
+        (p) =>
+          !tracksInventory(p) &&
+          !p.barcode &&
+          p.name.trim().toLowerCase() === name.toLowerCase(),
+      );
+      if (existing) {
+        // El precio escrito hoy manda sobre el guardado
+        addToCart(existing, 1, false);
+        setCart((prev) =>
+          prev.map((i) =>
+            i.product.id === existing.id && !i.isUnitSale
+              ? { ...i, effectivePrice: salePrice }
+              : i,
+          ),
+        );
+        setShowQuickRegister(false);
+        barcodeRef.current?.focus();
+        return;
+      }
     }
 
     setQuickRegisterSaving(true);
@@ -1027,7 +1097,8 @@ export default function POSPage() {
           sale_price: salePrice,
           cost_price: costPrice,
           stock,
-          min_stock: 5,
+          min_stock: noInventory ? 0 : 5,
+          ...(noInventory ? { track_inventory: false } : {}),
         },
         getToken,
       )) as unknown as Product;
@@ -1885,7 +1956,7 @@ export default function POSPage() {
                   <div className="p-2 bg-brand rounded-lg">
                     <Plus className="h-5 w-5 text-white" />
                   </div>
-                  Registrar producto
+                  {quickNoInventory ? "Producto sin código" : "Registrar producto"}
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -1898,8 +1969,9 @@ export default function POSPage() {
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Complétalo para venderlo ahora. Podrás editar el resto de
-                detalles luego en Productos.
+                {quickNoInventory
+                  ? "Escribe qué es y cuánto vale: se agrega a la venta y queda guardado para buscarlo la próxima vez."
+                  : "Complétalo para venderlo ahora. Podrás editar el resto de detalles luego en Productos."}
               </p>
             </CardHeader>
             <CardContent>
@@ -1981,6 +2053,20 @@ export default function POSPage() {
                     />
                   </div>
                 </div>
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={quickNoInventory}
+                    onChange={(e) => setQuickNoInventory(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--brand,#155dfc)]"
+                  />
+                  <span>
+                    <span className="font-medium">No llevar inventario</span>{" "}
+                    (mecatos, productos sueltos sin código): se vende siempre,
+                    sin contar unidades.
+                  </span>
+                </label>
+                {!quickNoInventory && (
                 <div>
                   <label className="text-xs font-medium text-gray-600">
                     Stock inicial <span className="text-red-500">*</span>
@@ -2001,6 +2087,7 @@ export default function POSPage() {
                     className="mt-1"
                   />
                 </div>
+                )}
                 <div className="flex gap-2 pt-2">
                   <Button
                     type="button"
@@ -2027,9 +2114,9 @@ export default function POSPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}
-        <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
+        <div className="space-y-4 order-2 lg:order-1">
           {/* Apertura y cierre de caja */}
           <CashRegisterControl />
 
@@ -2183,14 +2270,31 @@ export default function POSPage() {
           {/* Búsqueda de productos */}
           <Card data-guide="pos-search">
             <CardHeader className="pb-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar productos..."
-                  className="pl-10 text-sm md:text-base"
-                />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar productos..."
+                    className="pl-10 text-sm md:text-base"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    openQuickRegister({
+                      name: searchTerm.trim(),
+                      noInventory: true,
+                    })
+                  }
+                  title="Vender algo que no tiene código de barras ni está registrado"
+                  className="shrink-0 border-brand text-brand hover:bg-brand-light/50 cursor-pointer"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Sin código
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -2389,8 +2493,14 @@ export default function POSPage() {
           </div>
           {/* En escritorio la tarjeta no pasa del alto de la pantalla: la lista de
               productos tiene su propio scroll y el total con "Procesar Venta"
-              queda siempre a la vista, por encima del botón flotante de la tienda. */}
-          <Card data-guide="pos-cart" className="receipt-edge relative lg:sticky lg:top-0 rounded-b-none border-b-0 md:flex md:flex-col md:max-h-[calc(100dvh-9rem)]">
+              queda siempre a la vista. En pantallas grandes la tarjeta ocupa todo
+              el alto disponible: el cobro queda pegado abajo y la lista gana espacio. */}
+          <Card
+            ref={cartCardRef}
+            data-guide="pos-cart"
+            style={cartCardHeight ? { height: cartCardHeight } : undefined}
+            className="receipt-edge relative rounded-b-none border-b-0 md:flex md:flex-col md:max-h-[calc(100dvh-9rem)] lg:sticky! lg:top-2 lg:max-h-none"
+          >
             {/* Nueva venta: en la esquina de la tarjeta para dejar la fila a las pestañas */}
             <button
               type="button"
@@ -2768,7 +2878,7 @@ export default function POSPage() {
                 )}
               </div>
 
-              <div className="space-y-2 max-h-[300px] md:max-h-none md:flex-1 md:min-h-[7rem] overflow-y-auto mb-3 md:-mr-2 md:pr-2">
+              <div className="space-y-1 max-h-[300px] md:max-h-none md:flex-1 md:min-h-[7rem] overflow-y-auto mb-3 md:-mr-2 md:pr-2">
                 {cart.length === 0 ? (
                   <p className="text-center text-gray-500 py-6 text-sm">
                     Carrito vacío
@@ -2784,85 +2894,68 @@ export default function POSPage() {
                     return (
                       <div
                         key={`${item.product.id}-${item.isUnitSale ? "unit" : "package"}`}
-                        className={`p-2.5 border rounded-lg ${item.hasOffer ? "bg-brand-light/50 border-brand/60" : "border-gray-300"}`}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md border px-2 py-1",
+                          item.hasOffer
+                            ? "bg-brand-light/50 border-brand/60"
+                            : "border-gray-300",
+                          // Cantidad mayor a 1: resalta para notar un escaneo doble
+                          item.quantity > 1 && "bg-amber-50 border-amber-300",
+                        )}
                       >
-                        {/* Nombre y total de la línea; debajo precio x cantidad */}
-                        <div className="mb-2">
-                          <div className="flex items-start gap-2">
-                            <p className="flex-1 min-w-0 text-sm md:text-base font-semibold leading-snug">
-                              {item.product.name}
-                              {item.isUnitSale && (
-                                <span className="ml-1.5 text-[11px] bg-brand-light text-brand px-1.5 py-0.5 rounded align-middle">
-                                  {unitLabel}es sueltos
-                                </span>
-                              )}
-                            </p>
-                            <span className="font-num font-bold text-sm md:text-base text-brand whitespace-nowrap">
-                              {formatCurrency(price * item.quantity)}
+                        <p
+                          className="flex-1 min-w-0 truncate text-sm font-medium"
+                          title={item.product.name}
+                        >
+                          {item.product.name}
+                          {item.isUnitSale && (
+                            <span className="ml-1 text-[10px] text-brand">
+                              ({unitLabel})
                             </span>
-                          </div>
-                          <div className="flex items-baseline flex-wrap gap-x-1.5 text-xs text-gray-600">
-                            {item.hasOffer && (
-                              <span className="rounded bg-brand px-1 font-bold text-white">
-                                -{item.discountPercentage}%
-                              </span>
-                            )}
-                            {item.hasOffer && item.originalPrice && (
-                              <span className="text-gray-400 line-through">
-                                {formatCurrency(item.originalPrice)}
-                              </span>
-                            )}
-                            <span>
-                              {formatCurrency(price)} x {item.quantity} {unitLabel}
-                              {item.quantity > 1 ? "s" : ""}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Controles en una sola fila: - cantidad + ... eliminar */}
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
+                          )}
+                        </p>
+                        <span className="hidden xl:inline font-num text-xs text-gray-500 whitespace-nowrap">
+                          {formatCurrency(price)}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
                             aria-label="Quitar uno"
                             onClick={() =>
                               updateQuantity(item.product.id, -1, item.isUnitSale)
                             }
-                            className="h-10 w-10 md:h-9 md:w-9 p-0 shrink-0 bg-brand hover:bg-brand-hover text-white border-brand rounded-lg cursor-pointer"
+                            className="flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-md bg-brand text-white hover:bg-brand-hover cursor-pointer"
                           >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <Input
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <input
                             type="text"
                             inputMode="numeric"
-                            value={item.quantity}
+                            aria-label={`Cantidad de ${item.product.name}`}
+                            value={item.quantity === 0 ? "" : item.quantity}
+                            onFocus={(e) => e.currentTarget.select()}
                             onChange={(e) => {
                               const value = e.target.value;
-                              // Permitir vacío o solo números
-                              if (value === "" || /^\d+$/.test(value)) {
-                                if (value === "") {
-                                  // Permitir campo vacío temporalmente
-                                  setCart((prev) =>
-                                    prev.map((cartItem) =>
-                                      cartItem.product.id ===
-                                        item.product.id &&
-                                      cartItem.isUnitSale === item.isUnitSale
-                                        ? { ...cartItem, quantity: 0 }
-                                        : cartItem,
-                                    ),
-                                  );
-                                } else {
-                                  const val = parseInt(value);
-                                  setDirectQuantity(
-                                    item.product.id,
-                                    val,
-                                    item.isUnitSale,
-                                  );
-                                }
+                              if (value !== "" && !/^\d+$/.test(value)) return;
+                              if (value === "") {
+                                // Campo vacío mientras se escribe
+                                setCart((prev) =>
+                                  prev.map((c) =>
+                                    c.product.id === item.product.id &&
+                                    c.isUnitSale === item.isUnitSale
+                                      ? { ...c, quantity: 0 }
+                                      : c,
+                                  ),
+                                );
+                              } else {
+                                setDirectQuantity(
+                                  item.product.id,
+                                  parseInt(value),
+                                  item.isUnitSale,
+                                );
                               }
                             }}
                             onBlur={(e) => {
-                              // Al perder el foco, si está vacío o es 0, establecer en 1
                               if (
                                 e.target.value === "" ||
                                 parseInt(e.target.value) === 0
@@ -2874,49 +2967,36 @@ export default function POSPage() {
                                 );
                               }
                             }}
-                            onKeyDown={(e) => {
-                              // Permitir borrar con backspace/delete
-                              if (
-                                e.key === "Backspace" ||
-                                e.key === "Delete"
-                              ) {
-                                return;
-                              }
-                              // Solo permitir números y teclas de control
-                              if (
-                                !/\d/.test(e.key) &&
-                                !["ArrowLeft", "ArrowRight", "Tab"].includes(
-                                  e.key,
-                                )
-                              ) {
-                                e.preventDefault();
-                              }
-                            }}
-                            className="w-14 h-10 md:h-9 text-center text-[16px] md:text-base font-bold p-1"
+                            className={cn(
+                              "h-9 md:h-7 w-10 rounded-md border border-gray-300 text-center text-[16px] md:text-sm font-bold font-num p-0",
+                              item.quantity > 1 &&
+                                "border-amber-400 text-amber-700",
+                            )}
                           />
-                          <Button
-                            size="sm"
-                            variant="outline"
+                          <button
+                            type="button"
                             aria-label="Agregar uno"
                             onClick={() =>
                               updateQuantity(item.product.id, 1, item.isUnitSale)
                             }
-                            className="h-10 w-10 md:h-9 md:w-9 p-0 shrink-0 bg-brand hover:bg-brand-hover text-white border-brand rounded-lg cursor-pointer"
+                            className="flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-md bg-brand text-white hover:bg-brand-hover cursor-pointer"
                           >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label="Eliminar del carrito"
-                            onClick={() =>
-                              removeFromCart(item.product.id, item.isUnitSale)
-                            }
-                            className="ml-auto h-10 w-10 md:h-9 md:w-9 p-0 shrink-0 hover:bg-brand-light/50"
-                          >
-                            <Trash2 className="h-5 w-5 text-brand" />
-                          </Button>
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
                         </div>
+                        <span className="w-20 text-right font-num text-sm font-bold text-brand whitespace-nowrap">
+                          {formatCurrency(price * item.quantity)}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Eliminar del carrito"
+                          onClick={() =>
+                            removeFromCart(item.product.id, item.isUnitSale)
+                          }
+                          className="flex h-9 w-9 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-md hover:bg-brand-light/50 cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4 text-brand" />
+                        </button>
                       </div>
                     );
                   })
