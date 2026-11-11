@@ -1199,8 +1199,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       {/* Barra fija abajo: Guardar/Cancelar siempre a la vista, sin tener que
           bajar hasta el final de un formulario largo. Los márgenes negativos
-          la extienden de borde a borde del área con scroll (<main>). */}
-      <div className="sticky bottom-0 z-20 -mx-4 flex gap-4 border-t border-gray-200 bg-[var(--shell-canvas)]/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
+          la extienden de borde a borde del área con scroll (<main>), y el
+          bottom negativo cancela el padding inferior de <main> (pb-6 / md:pb-10)
+          para que quede pegada al borde real y no deje pasar el formulario. */}
+      <div className="sticky -bottom-6 z-20 -mx-4 flex justify-center gap-4 border-t border-gray-200 bg-[var(--shell-canvas)]/95 px-4 py-3 backdrop-blur md:-bottom-10 md:-mx-8 md:px-8">
         <Button type="submit" disabled={loading}>
           {loading ? "Guardando..." : productId ? "Actualizar" : "Crear"}{" "}
           {businessType.vocabulary.itemSingular}

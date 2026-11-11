@@ -48,7 +48,6 @@ import {
   isProductActive,
 } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
-import { HEADER_TRAY_SPACE } from "@/components/dashboard/header";
 import {
   calculatePointsForPurchase,
   addPointsToCustomer,
@@ -73,6 +72,25 @@ import {
   readCachedCollection,
   queueSale,
 } from "@/lib/offline-store";
+
+// Iniciales de las categorías para los filtros del POS: la primera letra, y si
+// dos categorías empiezan igual, las letras justas para distinguirlas
+// ("Abarrotes" → "Ab", "Aseo" → "As"). Mayúscula inicial, resto en minúscula.
+function categoryInitials(names: string[]): string[] {
+  const clean = names.map((n) => n.trim());
+  return clean.map((name) => {
+    const lower = name.toLowerCase();
+    let len = 1;
+    while (
+      len < name.length &&
+      clean.some((o) => o !== name && o.toLowerCase().startsWith(lower.slice(0, len)))
+    ) {
+      len++;
+    }
+    const label = name.slice(0, len);
+    return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+  });
+}
 
 interface CartItem {
   product: Product;
@@ -2117,9 +2135,6 @@ export default function POSPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}
         <div className="space-y-4 order-2 lg:order-1">
-          {/* Apertura y cierre de caja */}
-          <CashRegisterControl />
-
           {/* Búsqueda por código de barras */}
           <Card
             data-guide="pos-scan"
@@ -2129,66 +2144,45 @@ export default function POSPage() {
                 : "border-brand bg-linear-to-r from-brand-light/50 to-white"
             }`}
           >
-            <CardContent className="pt-6">
+            <CardContent className="p-3">
               <div className="space-y-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className={`p-2 rounded-lg transition-colors ${
-                      scanSuccess ? "bg-brand" : "bg-brand"
-                    }`}
-                  >
-                    <Scan className="h-6 w-6 text-white" />
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-brand">
+                    <Scan className="h-5 w-5 text-white" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-lg text-gray-900">
-                      {scanSuccess
-                        ? "✓ Producto Agregado"
-                        : "Escanear Producto"}
-                    </h4>
-                    <p className="text-xs text-gray-600">
-                      {scanSuccess
-                        ? "Escanea el siguiente producto"
-                        : "Selecciona tu método de escaneo"}
-                    </p>
-                  </div>
+                  <h4 className="flex-1 min-w-0 truncate font-bold text-base text-gray-900">
+                    {scanSuccess ? "✓ Producto Agregado" : "Escanear Producto"}
+                  </h4>
 
-                  {/* Botones de selección de método de escaneo (solo ícono, texto debajo) */}
+                  {/* Botones de selección de método de escaneo (ícono + texto en línea) */}
                   {!showBarcodeInput && !showCameraScanner && (
-                    <div className="flex items-start gap-3 shrink-0">
-                      <div className="flex flex-col items-center gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          onClick={() => {
-                            setShowBarcodeInput(true);
-                            // Auto-enfocar el input después de un pequeño delay
-                            setTimeout(() => barcodeRef.current?.focus(), 100);
-                          }}
-                          className="h-11 w-11 bg-brand hover:bg-brand-hover transition-colors"
-                          title="Escanear con lector USB"
-                          aria-label="Escanear con lector USB"
-                        >
-                          <Scan className="h-5 w-5" />
-                        </Button>
-                        <span className="text-[11px] font-medium text-gray-600 leading-none">
-                          Lector USB
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          onClick={() => setShowCameraScanner(true)}
-                          className="h-11 w-11 bg-brand hover:bg-brand-hover transition-colors"
-                          title="Escanear con cámara"
-                          aria-label="Escanear con cámara"
-                        >
-                          <Camera className="h-5 w-5" />
-                        </Button>
-                        <span className="text-[11px] font-medium text-gray-600 leading-none">
-                          Cámara
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setShowBarcodeInput(true);
+                          // Auto-enfocar el input después de un pequeño delay
+                          setTimeout(() => barcodeRef.current?.focus(), 100);
+                        }}
+                        className="h-9 gap-1.5 bg-brand hover:bg-brand-hover transition-colors cursor-pointer"
+                        title="Escanear con lector USB"
+                        aria-label="Escanear con lector USB"
+                      >
+                        <Scan className="h-4 w-4" />
+                        Lector USB
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setShowCameraScanner(true)}
+                        className="h-9 gap-1.5 bg-brand hover:bg-brand-hover transition-colors cursor-pointer"
+                        title="Escanear con cámara"
+                        aria-label="Escanear con cámara"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Cámara
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -2299,30 +2293,37 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               {/* Filtros de categoría */}
-              <div className="mb-4 flex flex-wrap gap-2">
+              <div className="mb-3 flex flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
                   onClick={() => setSelectedCategory("all")}
-                  className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-colors ${
+                  className={`shrink-0 h-8 px-3 inline-flex items-center justify-center cursor-pointer rounded-full text-xs md:text-sm font-semibold transition-colors ${
                     selectedCategory === "all"
                       ? "bg-brand text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-brand hover:text-white"
                   }`}
                 >
                   Todos
                 </button>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-colors ${
-                      selectedCategory === category.id
-                        ? "bg-brand text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+                {(() => {
+                  const initials = categoryInitials(
+                    categories.map((c) => c.name),
+                  );
+                  return categories.map((category, i) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                      title={category.name}
+                      aria-label={category.name}
+                      className={`shrink-0 h-8 min-w-8 px-2 inline-flex items-center justify-center cursor-pointer rounded-full text-xs md:text-sm font-semibold transition-colors ${
+                        selectedCategory === category.id
+                          ? "bg-brand text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-brand hover:text-white"
+                      }`}
+                    >
+                      {initials[i]}
+                    </button>
+                  ));
+                })()}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
@@ -2467,14 +2468,13 @@ export default function POSPage() {
           </Card>
         </div>
 
-        {/* Panel derecho - Carrito. En escritorio empieza debajo de la bandeja
-            de campana/tema/perfil, que queda fija arriba a la derecha. En el
+        {/* Panel derecho - Carrito. En escritorio sube hasta el borde
+            superior (en el POS no hay bandeja de campana/tema/perfil). En el
             celular es un panel que entra desde la derecha (botón lateral). */}
         <div
           id="pos-cart-panel"
           className={cn(
             "space-y-4 order-1 lg:order-2",
-            HEADER_TRAY_SPACE,
             "max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:z-50 max-md:m-0 max-md:w-[92vw] max-md:max-w-md max-md:overflow-y-auto max-md:bg-[var(--shell-canvas)] max-md:px-3 max-md:pb-8 max-md:pt-16 max-md:shadow-2xl max-md:transition-[transform,visibility] max-md:duration-300 max-md:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             !cartOpen && "max-md:invisible max-md:translate-x-full",
           )}
@@ -2613,6 +2613,9 @@ export default function POSPage() {
                   </button>
                 )}
               </div>
+              {/* Caja: debajo de las pestañas de ventas (y del botón "+"), con el
+                  detalle de la sesión integrado. Sin permiso de caja no se ve. */}
+              <CashRegisterControl compact />
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 <div ref={cartIconRef} className="relative">
                   <ShoppingCart

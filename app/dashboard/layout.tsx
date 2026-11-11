@@ -351,7 +351,9 @@ function DashboardLayoutInner({
     () => false,
   );
   const floatingHeader = isDesktop && pathname !== "/dashboard";
-  // En el Punto de Venta la bandeja va fija y el carrito empieza debajo de ella.
+  // En el Punto de Venta no se muestra la bandeja (campana, tema, ayuda, perfil):
+  // el carrito sube a ocupar ese espacio. En escritorio no hay otra cabecera, así
+  // que ahí no queda ninguna; en celular se mantiene la barra con el menú.
   const pinnedHeader = floatingHeader && pathname === "/dashboard/pos";
 
   // Caso "unknown": no pudimos verificar la cuenta por un fallo de red/auth con
@@ -470,7 +472,7 @@ function DashboardLayoutInner({
               pinnedHeader && "relative",
             )}
           >
-            {floatingHeader && <Header floating pinned={pinnedHeader} />}
+            {floatingHeader && !pinnedHeader && <Header floating />}
 
             {/* Alerta de expiración cuando faltan 3 días o menos (no para team members) */}
             {!loading &&

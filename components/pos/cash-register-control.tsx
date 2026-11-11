@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { ArrowDownToLine, ArrowUpFromLine, HelpCircle, History, Loader2, Lock, LockOpen, Trash2, Wallet } from "lucide-react";
@@ -57,7 +57,13 @@ const formatPesosInput = (text: string) => {
  * (routes/cash-sessions.ts); aquí solo se muestra y se informa lo contado.
  * Si el usuario no tiene permiso para la caja, no se muestra nada.
  */
-export function CashRegisterControl() {
+export function CashRegisterControl({
+  compact = false,
+}: {
+  /** Versión para el carrito: más baja, con el detalle de la sesión en una
+   *  línea ("desde las…, base, quién abrió") y los botones debajo. */
+  compact?: boolean;
+} = {}) {
   const { getToken } = useAuth();
   const { openGuide } = useGuide();
   const [state, setState] = useState<
@@ -67,6 +73,31 @@ export function CashRegisterControl() {
     | { kind: "open"; session: CashSession; summary: CashSummary }
   >({ kind: "loading" });
   const [isOwner, setIsOwner] = useState(false);
+
+  // Versión compacta: un botón redondo con el candado que despliega el panel
+  const [panelOpen, setPanelOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!panelOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      // Un clic en el propio candado lo maneja su onClick (alternar)
+      if (popoverRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+      setPanelOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPanelOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [panelOpen]);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialog, setCloseDialog] = useState(false);
@@ -208,32 +239,82 @@ export function CashRegisterControl() {
 
   return (
     <>
+      {compact && (
+        <>
+          {/* Botón redondo con el candado, justo debajo del "+" de nueva venta */}
+          <button
+            ref={triggerRef}
+            type="button"
+            data-guide="cash-status"
+            onClick={() => setPanelOpen((v) => !v)}
+            aria-expanded={panelOpen}
+            aria-label={state.kind === "open" ? "Caja abierta: ver detalle" : "Caja cerrada: ver detalle"}
+            title={
+              state.kind === "open"
+                ? `Caja abierta desde las ${hour(state.session.opened_at)}`
+                : "Caja cerrada"
+            }
+            className={cn(
+              "absolute -right-2.5 top-[1.75rem] z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110",
+              state.kind === "open" ? "bg-brand hover:bg-brand-hover" : "bg-amber-500 hover:bg-amber-600",
+            )}
+          >
+            {state.kind === "open" ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+          </button>
+        </>
+      )}
+      {(!compact || panelOpen) && (
       <div
-        data-guide="cash-status"
+        ref={compact ? popoverRef : undefined}
+        data-guide={compact ? undefined : "cash-status"}
         className={cn(
-          "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2.5",
-          state.kind === "open" ? "border-brand/40 bg-brand-light/40" : "border-amber-300 bg-amber-50",
+          compact
+            ? "absolute right-2 top-[3.5rem] z-30 flex w-[min(22rem,calc(100%-1rem))] flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border bg-white px-2.5 py-2 shadow-lg"
+            : "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2",
+          state.kind === "open" ? "border-brand/40" : "border-amber-300",
+          !compact && (state.kind === "open" ? "bg-brand-light/40" : "bg-amber-50"),
         )}
       >
         <span
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+            "flex shrink-0 items-center justify-center rounded-full",
+            compact ? "h-7 w-7" : "h-8 w-8",
             state.kind === "open" ? "bg-brand text-white" : "bg-amber-400 text-white",
           )}
         >
           {state.kind === "open" ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
         </span>
-        <div className="min-w-0 flex-1 text-sm">
+        <div
+          className={cn(
+            "min-w-0 text-sm",
+            // Abierta + compacta: el texto largo ocupa su fila y los botones
+            // pasan a la siguiente; si no, comparte fila con los botones.
+            compact && state.kind === "open" ? "w-[calc(100%-2.25rem)] flex-none" : "flex-1",
+          )}
+        >
           {state.kind === "open" ? (
-            <>
-              <p className="font-semibold text-gray-900">
-                Caja abierta desde las {hour(state.session.opened_at)}
-              </p>
-              <p className="text-xs text-gray-600">
-                Base {formatCurrency(state.session.opening_amount)}
+            compact ? (
+              <p
+                className="truncate text-xs text-gray-700"
+                title={`Caja abierta desde las ${hour(state.session.opened_at)} · Base ${formatCurrency(state.session.opening_amount)}${state.session.opened_by_name ? ` · abrió ${state.session.opened_by_name}` : ""}`}
+              >
+                <span className="font-semibold text-gray-900">Caja abierta</span> desde las{" "}
+                {hour(state.session.opened_at)} · Base {formatCurrency(state.session.opening_amount)}
                 {state.session.opened_by_name ? ` · abrió ${state.session.opened_by_name}` : ""}
               </p>
-            </>
+            ) : (
+              <>
+                <p className="font-semibold text-gray-900">
+                  Caja abierta desde las {hour(state.session.opened_at)}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Base {formatCurrency(state.session.opening_amount)}
+                  {state.session.opened_by_name ? ` · abrió ${state.session.opened_by_name}` : ""}
+                </p>
+              </>
+            )
+          ) : compact ? (
+            <p className="font-semibold text-gray-900">Caja cerrada</p>
           ) : (
             <>
               <p className="font-semibold text-gray-900">Caja cerrada</p>
@@ -243,7 +324,11 @@ export function CashRegisterControl() {
             </>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div
+          // En el desplegable, al elegir una acción el panel se cierra
+          onClick={() => compact && setPanelOpen(false)}
+          className={cn("flex items-center gap-1.5", compact && state.kind === "open" && "w-full justify-end")}
+        >
           <button
             type="button"
             onClick={() => openGuide("caja")}
@@ -281,6 +366,7 @@ export function CashRegisterControl() {
           )}
         </div>
       </div>
+      )}
 
       {/* Abrir caja */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 import { Store } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -19,6 +20,7 @@ const PROFILE_CACHE_KEY = "posib-profile-cache";
  */
 export function StoreQuickAccess() {
   const { getToken } = useAuth();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
@@ -47,8 +49,11 @@ export function StoreQuickAccess() {
     };
   }, [getToken]);
 
-  // No mostrar a superadmins ni si la tienda no está lista/activa
+  // No mostrar a superadmins ni si la tienda no está lista/activa. Tampoco en
+  // el Punto de Venta: ahí tapa el carrito y quita espacio de trabajo (la
+  // tienda sigue en el menú lateral, "Tienda Online").
   if (
+    pathname === "/dashboard/pos" ||
     !profile ||
     profile.is_superadmin ||
     !hasStoreAccess(profile) ||
