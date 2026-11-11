@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BlurredDashboardBackdrop } from './blurred-dashboard-backdrop';
 
 interface SubscriptionExpiredModalProps {
   reason: string;
@@ -43,8 +44,11 @@ export function SubscriptionExpiredModal({ reason }: SubscriptionExpiredModalPro
   const message = getMessage();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
+    <div className="relative min-h-screen bg-gray-50 flex items-center justify-center overflow-hidden p-4">
+      {/* Maqueta borrosa del panel de control + velo, para no mostrar la pantalla en blanco */}
+      <BlurredDashboardBackdrop />
+      <div className="pointer-events-none absolute inset-0 bg-black/20" aria-hidden="true" />
+      <Card className="relative z-10 max-w-md w-full shadow-2xl">
         <CardHeader>
           <div className="flex items-center justify-center mb-4">
             <div className="h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center">
@@ -54,7 +58,7 @@ export function SubscriptionExpiredModal({ reason }: SubscriptionExpiredModalPro
           <CardTitle className="text-center text-2xl">{message.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-center text-gray-600">{message.description}</p>
+          <p className="text-center text-gray-800">{message.description}</p>
 
           <div className="space-y-3 pt-4">
             <Button
