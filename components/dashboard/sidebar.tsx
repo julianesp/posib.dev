@@ -898,7 +898,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </nav>
 
       {/* Footer Desktop */}
-      <div className={cn("hidden md:block p-4 border-t border-[var(--shell-line)] space-y-1", !collapsedView && "overflow-hidden")}>
+      <div className={cn("hidden md:block px-3 py-4 border-t border-[var(--shell-line)] space-y-1", !collapsedView && "overflow-hidden")}>
         {!isSuperAdmin && (
           <Link
             href="/dashboard/subscription"
@@ -913,7 +913,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               collapsedView && "justify-center",
             )}
           >
-            <CreditCard className="h-5 w-5" />
+            <CreditCard className="h-5 w-5 shrink-0" />
             {!collapsedView && <span className="sidebar-label-in whitespace-nowrap">Suscripción</span>}
             {collapsedView && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
@@ -935,7 +935,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
             collapsedView && "justify-center",
           )}
         >
-          <Settings className="h-5 w-5" />
+          <Settings className="h-5 w-5 shrink-0" />
           {!collapsedView && <span className="sidebar-label-in whitespace-nowrap">Configuración</span>}
           {collapsedView && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
