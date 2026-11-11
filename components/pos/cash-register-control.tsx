@@ -295,7 +295,7 @@ export function CashRegisterControl({
           {state.kind === "open" ? (
             compact ? (
               <p
-                className="truncate text-xs text-gray-700"
+                className="truncate text-xs text-gray-900"
                 title={`Caja abierta desde las ${hour(state.session.opened_at)} · Base ${formatCurrency(state.session.opening_amount)}${state.session.opened_by_name ? ` · abrió ${state.session.opened_by_name}` : ""}`}
               >
                 <span className="font-semibold text-gray-900">Caja abierta</span> desde las{" "}
@@ -307,7 +307,7 @@ export function CashRegisterControl({
                 <p className="font-semibold text-gray-900">
                   Caja abierta desde las {hour(state.session.opened_at)}
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-800">
                   Base {formatCurrency(state.session.opening_amount)}
                   {state.session.opened_by_name ? ` · abrió ${state.session.opened_by_name}` : ""}
                 </p>
@@ -318,7 +318,7 @@ export function CashRegisterControl({
           ) : (
             <>
               <p className="font-semibold text-gray-900">Caja cerrada</p>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-gray-800">
                 Ábrela con la base del día para cuadrar al final del turno.
               </p>
             </>
@@ -334,7 +334,7 @@ export function CashRegisterControl({
             onClick={() => openGuide("caja")}
             title="¿Cómo funciona la caja?"
             aria-label="¿Cómo funciona la caja?"
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-white"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-gray-800 hover:bg-white"
           >
             <HelpCircle className="h-4 w-4" />
           </button>
@@ -343,7 +343,7 @@ export function CashRegisterControl({
             data-guide="cash-history"
             title="Ver cierres de caja"
             aria-label="Ver cierres de caja"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-white"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-800 hover:bg-white"
           >
             <History className="h-4 w-4" />
           </Link>
@@ -434,7 +434,7 @@ export function CashRegisterControl({
                     ? kind === "salida"
                       ? "border-red-400 bg-red-50 text-red-700"
                       : "border-green-500 bg-green-50 text-green-700"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50",
+                    : "border-gray-200 text-gray-800 hover:bg-gray-50",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -464,7 +464,7 @@ export function CashRegisterControl({
                 onClick={() => setMoveReason(reason)}
                 className={cn(
                   "cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                  moveReason === reason ? "border-brand bg-brand text-white" : "border-gray-300 text-gray-700 hover:bg-gray-50",
+                  moveReason === reason ? "border-brand bg-brand text-white" : "border-gray-300 text-gray-900 hover:bg-gray-50",
                 )}
               >
                 {reason}
@@ -529,7 +529,7 @@ export function CashRegisterControl({
                         {m.kind === "salida" ? "−" : "+"}
                         {formatCurrency(m.amount)}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-gray-700">{m.reason}</span>
+                      <span className="min-w-0 flex-1 truncate text-gray-900">{m.reason}</span>
                       <span className="text-gray-400">{hour(m.created_at)}</span>
                       {isOwner && (
                         <button
@@ -548,8 +548,8 @@ export function CashRegisterControl({
               )}
 
               {(otherMethods.length > 0 || otherPayments.length > 0) && (
-                <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
-                  <p className="mb-1 font-medium text-gray-700">No van al cajón:</p>
+                <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-800">
+                  <p className="mb-1 font-medium text-gray-900">No van al cajón:</p>
                   {otherMethods.map(([method, t]) => (
                     <Row key={`s-${method}`} label={`${METHOD_LABEL[method] ?? method} (${t.count})`} value={t.total} small />
                   ))}
@@ -634,7 +634,7 @@ export function CashRegisterControl({
 function Row({ label, value, strong, small }: { label: string; value: number; strong?: boolean; small?: boolean }) {
   return (
     <div className={cn("flex items-baseline justify-between gap-3", strong && "text-base font-bold", small && "text-xs")}>
-      <span className={strong ? "text-gray-900" : "text-gray-600"}>{label}</span>
+      <span className={strong ? "text-gray-900" : "text-gray-800"}>{label}</span>
       <span className={cn("font-num whitespace-nowrap", strong ? "text-brand" : "text-gray-900")}>
         {formatCurrency(value)}
       </span>

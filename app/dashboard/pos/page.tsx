@@ -759,7 +759,7 @@ export default function POSPage() {
       console.log("❌ [LECTOR USB] Producto NO encontrado en ninguna lista");
       const result = await Swal.custom({
         title: "Producto no encontrado",
-        html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-600 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
+        html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-800 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Registrar producto",
@@ -882,7 +882,7 @@ export default function POSPage() {
       setShowCameraScanner(false);
       const result = await Swal.custom({
         title: "Producto no encontrado",
-        html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-600 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
+        html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-800 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Registrar producto",
@@ -1658,14 +1658,14 @@ export default function POSPage() {
                 <p class="text-lg font-bold text-brand mb-2">
                   🏆 ${selectedCustomer.name}
                 </p>
-                <p class="text-sm text-gray-700 mb-2">
+                <p class="text-sm text-gray-900 mb-2">
                   Ahora tiene <strong class="text-brand">${customerNewPoints} puntos acumulados</strong>
                 </p>
                 <p class="text-sm text-brand font-semibold">
                   ✓ Ya puede canjear un descuento del ${REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}% en su próxima compra
                 </p>
               </div>
-              <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 text-xs text-gray-600">
+              <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 text-xs text-gray-800">
                 <p><strong>Recuerda:</strong> El cliente puede canjear ${REWARD_CONSTANTS.POINTS_FOR_DISCOUNT} puntos por un ${REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}% de descuento en su próxima compra.</p>
               </div>
             </div>
@@ -1690,7 +1690,7 @@ export default function POSPage() {
 
       // Mostrar mensaje personalizado - SIEMPRE con opción de factura
       let htmlContent = `
-        <p class="text-sm text-gray-500 mb-1">Venta #${sale.sale_number}</p>
+        <p class="text-sm text-gray-800 mb-1">Venta #${sale.sale_number}</p>
       `;
 
       // Mostrar información de productos con ofertas
@@ -1706,7 +1706,7 @@ export default function POSPage() {
             : 0;
           htmlContent += `
             <div class="flex justify-between items-center text-xs">
-              <span class="text-gray-700">
+              <span class="text-gray-900">
                 ${item.product.name} <span class="font-semibold text-brand">(-${item.discountPercentage}%)</span>
               </span>
               <span class="text-brand font-semibold">-${formatCurrency(itemDiscount)}</span>
@@ -1730,11 +1730,11 @@ export default function POSPage() {
             appliedDiscount > 0
               ? `
             <div class="bg-gray-50 p-2 rounded mb-2 text-sm">
-              <p class="text-gray-600">Subtotal: ${formatCurrency(subtotal)}</p>
+              <p class="text-gray-800">Subtotal: ${formatCurrency(subtotal)}</p>
               <p class="text-brand font-semibold">Descuento (${
                 REWARD_CONSTANTS.DISCOUNT_PERCENTAGE
               }%): -${formatCurrency(appliedDiscount)}</p>
-              <p class="text-xs text-gray-500 mt-1">Se canjearon ${pointsRedeemed} puntos</p>
+              <p class="text-xs text-gray-800 mt-1">Se canjearon ${pointsRedeemed} puntos</p>
             </div>
           `
               : ""
@@ -1743,7 +1743,7 @@ export default function POSPage() {
             total,
           )}</p>
           <div class="bg-brand-light/50 border border-brand/40 rounded-lg px-3 py-2 mb-2">
-            <p class="text-sm text-gray-600">Cliente: <strong>${
+            <p class="text-sm text-gray-800">Cliente: <strong>${
               selectedCustomer.name
             }</strong></p>
           </div>
@@ -1755,7 +1755,7 @@ export default function POSPage() {
             htmlContent += `
               <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 mb-2">
                 <p class="text-sm font-bold text-brand">⏳ ${pointsEarned} puntos pendientes</p>
-                <p class="text-xs text-gray-600 mt-1">Se asignarán cuando se complete el pago</p>
+                <p class="text-xs text-gray-800 mt-1">Se asignarán cuando se complete el pago</p>
               </div>
             `;
           } else {
@@ -1785,7 +1785,7 @@ export default function POSPage() {
           htmlContent += `
             <div class="bg-brand-light/50 border border-brand/40 rounded-lg px-3 py-2">
               <p class="text-sm font-semibold text-brand">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? "día" : "días"})</p>
-              <p class="text-xs text-gray-600 mt-0.5">Fecha de vencimiento: ${dueDate.toLocaleDateString(
+              <p class="text-xs text-gray-800 mt-0.5">Fecha de vencimiento: ${dueDate.toLocaleDateString(
                 "es-CO",
               )}</p>
             </div>
@@ -1894,7 +1894,7 @@ export default function POSPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               ¡Bienvenido al Punto de Venta!
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-800">
               Para comenzar a vender, primero necesitas agregar productos a tu
               inventario.
             </p>
@@ -1933,14 +1933,14 @@ export default function POSPage() {
 
             <Link
               href="/dashboard/products"
-              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors"
             >
               Ver Todos los Productos
             </Link>
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-800">
               💡 <strong>Consejo:</strong> Puedes crear productos de ejemplo
               para probar el sistema rápidamente.
             </p>
@@ -1986,7 +1986,7 @@ export default function POSPage() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-800 mt-1">
                 {quickNoInventory
                   ? "Escribe qué es y cuánto vale: se agrega a la venta y queda guardado para buscarlo la próxima vez."
                   : "Complétalo para venderlo ahora. Podrás editar el resto de detalles luego en Productos."}
@@ -2002,7 +2002,7 @@ export default function POSPage() {
               >
                 {quickRegisterData.barcode && (
                   <div>
-                    <label className="text-xs font-medium text-gray-600">
+                    <label className="text-xs font-medium text-gray-800">
                       Código de barras
                     </label>
                     <Input
@@ -2013,7 +2013,7 @@ export default function POSPage() {
                   </div>
                 )}
                 <div>
-                  <label className="text-xs font-medium text-gray-600">
+                  <label className="text-xs font-medium text-gray-800">
                     Nombre <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -2031,7 +2031,7 @@ export default function POSPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-600">
+                    <label className="text-xs font-medium text-gray-800">
                       Precio de venta <span className="text-red-500">*</span>
                     </label>
                     <Input
@@ -2051,7 +2051,7 @@ export default function POSPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600">
+                    <label className="text-xs font-medium text-gray-800">
                       Precio de costo
                     </label>
                     <Input
@@ -2071,7 +2071,7 @@ export default function POSPage() {
                     />
                   </div>
                 </div>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-900">
                   <input
                     type="checkbox"
                     checked={quickNoInventory}
@@ -2086,7 +2086,7 @@ export default function POSPage() {
                 </label>
                 {!quickNoInventory && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600">
+                  <label className="text-xs font-medium text-gray-800">
                     Stock inicial <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -2243,7 +2243,7 @@ export default function POSPage() {
                         <span className="text-sm md:text-base">Agregar</span>
                       </Button>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="flex items-center gap-2 text-xs text-gray-800">
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
                           scanSuccess ? "bg-brand animate-ping" : "bg-brand"
@@ -2299,7 +2299,7 @@ export default function POSPage() {
                   className={`shrink-0 h-8 px-3 inline-flex items-center justify-center cursor-pointer rounded-full text-xs md:text-sm font-semibold transition-colors ${
                     selectedCategory === "all"
                       ? "bg-brand text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-brand hover:text-white"
+                      : "bg-gray-100 text-gray-900 hover:bg-brand hover:text-white"
                   }`}
                 >
                   Todos
@@ -2317,7 +2317,7 @@ export default function POSPage() {
                       className={`shrink-0 h-8 min-w-8 px-2 inline-flex items-center justify-center cursor-pointer rounded-full text-xs md:text-sm font-semibold transition-colors ${
                         selectedCategory === category.id
                           ? "bg-brand text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-brand hover:text-white"
+                          : "bg-gray-100 text-gray-900 hover:bg-brand hover:text-white"
                       }`}
                     >
                       {initials[i]}
@@ -2374,26 +2374,26 @@ export default function POSPage() {
                               </div>
                             )}
                           </div>
-                          <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">
+                          <h4 className="font-semibold text-xs md:text-sm mb-1 line-clamp-2 text-gray-950">
                             {product.name}
                           </h4>
                           <div>
                             {hasOffer ? (
                               <>
-                                <p className="text-xs text-gray-400 line-through">
+                                <p className="text-xs text-gray-900 line-through">
                                   {formatCurrency(originalPrice)}
                                 </p>
-                                <p className="font-num text-sm md:text-lg font-bold text-brand">
+                                <p className="font-num text-sm md:text-lg font-bold text-gray-950">
                                   {formatCurrency(discountedPrice)}
                                 </p>
                               </>
                             ) : (
-                              <p className="font-num text-sm md:text-lg font-bold text-brand">
+                              <p className="font-num text-sm md:text-lg font-bold text-gray-950">
                                 {formatCurrency(product.sale_price)}
                               </p>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs md:text-[13px] font-medium text-gray-900">
                             Disponible:{" "}
                             {!!product.sell_by_unit
                               ? (() => {
@@ -2434,10 +2434,10 @@ export default function POSPage() {
                 ) : (
                   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
                       No hay productos disponibles
                     </h3>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-sm text-gray-800 mb-4">
                       {searchTerm || selectedCategory !== "all"
                         ? "Intenta cambiar los filtros de búsqueda"
                         : "Todos tus productos están sin stock"}
@@ -2485,7 +2485,7 @@ export default function POSPage() {
             <button
               type="button"
               onClick={() => setCartOpen(false)}
-              className="flex h-10 items-center gap-1 rounded-xl px-3 text-sm font-medium text-gray-600 ring-1 ring-[var(--shell-line)] hover:bg-white"
+              className="flex h-10 items-center gap-1 rounded-xl px-3 text-sm font-medium text-gray-800 ring-1 ring-[var(--shell-line)] hover:bg-white"
             >
               Seguir agregando
               <ChevronRight className="h-4 w-4" />
@@ -2553,7 +2553,7 @@ export default function POSPage() {
                         className={`flex items-center shrink-0 rounded-lg border text-xs md:text-sm transition-colors ${
                           isActive
                             ? "bg-brand border-brand text-white"
-                            : "bg-white border-gray-300 text-gray-700 hover:border-brand"
+                            : "bg-white border-gray-300 text-gray-900 hover:border-brand"
                         }`}
                       >
                         <button
@@ -2732,7 +2732,7 @@ export default function POSPage() {
                         <User className="h-4 w-4" />
                       </span>
                       <span className="flex-1 text-sm font-medium text-gray-800">
-                        Cliente <span className="font-normal text-gray-500">(opcional)</span>
+                        Cliente <span className="font-normal text-gray-800">(opcional)</span>
                       </span>
                       <span className="text-xs font-semibold text-brand">
                         {showCustomerSearch ? "Cerrar" : "Elegir"}
@@ -2767,7 +2767,7 @@ export default function POSPage() {
                         {showNewCustomerForm && (
                           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
                             <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs font-semibold text-gray-700">
+                              <p className="text-xs font-semibold text-gray-900">
                                 Nuevo Cliente
                               </p>
                               <Button
@@ -2869,7 +2869,7 @@ export default function POSPage() {
                                 className="w-full text-left p-2 hover:bg-gray-100 rounded text-xs"
                               >
                                 <p className="font-medium">{customer.name}</p>
-                                <p className="text-gray-500">
+                                <p className="text-gray-800">
                                   {customer.phone || customer.email}
                                 </p>
                               </button>
@@ -2883,7 +2883,7 @@ export default function POSPage() {
 
               <div className="space-y-1 max-h-[300px] md:max-h-none md:flex-1 md:min-h-[7rem] overflow-y-auto mb-3 md:-mr-2 md:pr-2">
                 {cart.length === 0 ? (
-                  <p className="text-center text-gray-500 py-6 text-sm">
+                  <p className="text-center text-gray-800 py-6 text-sm">
                     Carrito vacío
                   </p>
                 ) : (
@@ -2917,7 +2917,7 @@ export default function POSPage() {
                             </span>
                           )}
                         </p>
-                        <span className="hidden xl:inline font-num text-xs text-gray-500 whitespace-nowrap">
+                        <span className="hidden xl:inline font-num text-xs text-gray-800 whitespace-nowrap">
                           {formatCurrency(price)}
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
@@ -3011,7 +3011,7 @@ export default function POSPage() {
                   <div className="shrink-0 border-t border-dashed border-gray-300 pt-3 space-y-2">
                     {discountAmount > 0 && (
                       <div className="space-y-1">
-                        <div className="flex justify-between text-sm text-gray-600">
+                        <div className="flex justify-between text-sm text-gray-800">
                           <span>Subtotal:</span>
                           <span>
                             {formatCurrency(
@@ -3169,7 +3169,7 @@ export default function POSPage() {
               <>
                 <div className="text-center">
                   <h3 className="text-lg font-bold">Cobrar con QR</h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-800">
                     Muéstrale este código al cliente
                   </p>
                 </div>
@@ -3215,14 +3215,14 @@ export default function POSPage() {
                   <h3 className="text-lg font-bold">
                     No has registrado tu QR de pagos
                   </h3>
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-gray-800 mt-2">
                     Registra el QR de tu Nequi, Daviplata o cuenta bancaria para
                     mostrárselo al cliente al momento de cobrar. Lo encuentras
                     en la app de tu banco o billetera.
                   </p>
                 </div>
                 <div className="text-center bg-gray-50 border rounded-lg py-3">
-                  <p className="text-sm text-gray-500">Total a cobrar</p>
+                  <p className="text-sm text-gray-800">Total a cobrar</p>
                   <p className="text-2xl font-bold">
                     {formatCurrency(calculateTotal())}
                   </p>
