@@ -351,38 +351,25 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 md:space-y-3">
+              {/* Botones cuadrados: más fáciles de tocar en el celular */}
+              <div className="grid grid-cols-2 gap-3">
                 <a
                   href="/dashboard/superadmin"
-                  className="flex items-center justify-between p-2 md:p-3 bg-brand-light/50 rounded-lg hover:bg-brand-light transition-colors"
+                  className="flex aspect-square flex-col items-center justify-center gap-3 rounded-2xl bg-brand-light/50 p-3 text-center transition-colors hover:bg-brand-light active:scale-[0.97]"
                 >
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <Store className="h-4 w-4 md:h-5 md:w-5 text-brand flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-xs md:text-sm">
-                        Gestión de Tiendas
-                      </p>
-                      <p className="text-xs text-gray-500 hidden sm:block">
-                        Ver y administrar todas las tiendas
-                      </p>
-                    </div>
-                  </div>
+                  <Store className="h-9 w-9 text-brand flex-shrink-0" />
+                  <span className="text-sm font-semibold leading-tight text-gray-900">
+                    Gestión de Tiendas
+                  </span>
                 </a>
                 <a
                   href="/dashboard/admin/users"
-                  className="flex items-center justify-between p-2 md:p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                  className="flex aspect-square flex-col items-center justify-center gap-3 rounded-2xl bg-purple-50 p-3 text-center transition-colors hover:bg-purple-100 active:scale-[0.97]"
                 >
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <Users className="h-4 w-4 md:h-5 md:w-5 text-purple-600 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-xs md:text-sm">
-                        Usuarios del Sistema
-                      </p>
-                      <p className="text-xs text-gray-500 hidden sm:block">
-                        Gestionar usuarios y roles
-                      </p>
-                    </div>
-                  </div>
+                  <Users className="h-9 w-9 text-purple-600 flex-shrink-0" />
+                  <span className="text-sm font-semibold leading-tight text-gray-900">
+                    Usuarios del Sistema
+                  </span>
                 </a>
               </div>
             </CardContent>
