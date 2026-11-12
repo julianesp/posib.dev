@@ -25,11 +25,21 @@ type GtagFn = (
  * No hace nada si gtag aún no cargó o si el label no está configurado,
  * así que es seguro llamarla siempre.
  */
-export function trackSignupConversion(): void {
+export function trackSignupConversion(userId?: string): void {
   if (typeof window === 'undefined') return;
 
   const gtag = (window as unknown as { gtag?: GtagFn }).gtag;
   if (!gtag || !SIGNUP_LABEL) return;
+
+  // Evita contar dos veces al mismo usuario (la dispara /sign-up y el
+  // respaldo global de SignupConversionTracker).
+  const key = `gads_signup_${userId || 'anon'}`;
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch {
+    // localStorage bloqueado: seguimos y dejamos que Google deduplique.
+  }
 
   gtag('event', 'conversion', {
     send_to: `${GOOGLE_ADS_ID}/${SIGNUP_LABEL}`,

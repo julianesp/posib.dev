@@ -21,7 +21,7 @@ export default function SignUpPage() {
     if (!recienCreado) return;
 
     firedRef.current = true;
-    trackSignupConversion();
+    trackSignupConversion(user.id);
   }, [isLoaded, isSignedIn, user]);
 
   return (

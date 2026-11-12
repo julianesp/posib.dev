@@ -26,7 +26,7 @@ const faqs = [
       {
         question: "¿Puedo probar el sistema antes de pagar?",
         answer:
-          "Sí, todos los planes incluyen 15 días de prueba gratis con acceso completo a todas las funcionalidades. No se requiere tarjeta de crédito para iniciar la prueba.",
+          "Sí, todos los planes incluyen 30 días de prueba gratis con acceso completo a todas las funcionalidades. No se requiere tarjeta de crédito para iniciar la prueba.",
       },
       {
         question: "¿Qué incluye el plan?",

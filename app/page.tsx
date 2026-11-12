@@ -79,7 +79,7 @@ export default function Home() {
 
           {/* Social proof mínimo */}
           <p className="lp-text mt-8 inline-block rounded-2xl border-2 border-brand px-4 py-2 text-xs font-medium leading-relaxed">
-            Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español
+            Desde $24.900/mes · Sin tarjeta de crédito · Cancela cuando quieras
           </p>
         </div>
       </section>

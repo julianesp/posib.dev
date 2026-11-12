@@ -151,7 +151,7 @@ export default function OvercomeResistance() {
                 </p>
                 <p className="flex items-center justify-center gap-2">
                   <Check className="h-5 w-5 text-green-400" />
-                  <span>Prueba gratis 15 días sin compromiso</span>
+                  <span>Prueba gratis 30 días sin compromiso</span>
                 </p>
                 <p className="flex items-center justify-center gap-2">
                   <Check className="h-5 w-5 text-green-400" />

@@ -7,6 +7,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
 import HourTheme from '@/components/HourTheme';
 import AppToaster from '@/components/AppToaster';
+import SignupConversionTracker from '@/components/SignupConversionTracker';
 import SiteVisitTracker from '@/components/SiteVisitTracker';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import { ACCENT_INIT_SCRIPT } from '@/lib/accent';
@@ -227,6 +228,7 @@ export default function RootLayout({
           <Analytics />
           <HourTheme />
           <SiteVisitTracker />
+          <SignupConversionTracker />
           <AppToaster />
         </body>
       </html>

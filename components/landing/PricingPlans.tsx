@@ -211,7 +211,7 @@ export default function PricingPlans() {
 
         <div className="mt-12 text-center">
           <p className="text-white/70 text-sm">
-            ✨ <strong>15 días de prueba gratis</strong> con acceso completo a
+            ✨ <strong>30 días de prueba gratis</strong> con acceso completo a
             todas las funcionalidades. Sin tarjeta de crédito.
           </p>
           <p className="text-white/60 text-xs mt-2">
