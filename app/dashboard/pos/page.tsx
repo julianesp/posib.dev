@@ -60,6 +60,7 @@ import {
   canCustomerGetCredit,
   updateCustomerDebt,
 } from "@/lib/cloudflare-credit-helpers";
+import { posibLogoIconHtml } from "@/components/brand/posib-logo-html";
 import Swal from "@/lib/sweetalert";
 import { BarcodeScannerZXing } from "@/components/products/barcode-scanner-zxing";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
@@ -1816,8 +1817,9 @@ export default function POSPage() {
             : "Venta Completada",
         html: htmlContent,
         icon: "success",
+        iconHtml: posibLogoIconHtml(72, "is-entering is-pulsing"),
         confirmButtonText: "Aceptar",
-        customClass: { popup: "swal-sale-popup" },
+        customClass: { popup: "swal-sale-popup", icon: "swal-posib-icon" },
         didOpen: () => {
           // Agregar evento al botón de factura
           const invoiceBtn = document.getElementById("generate-invoice-btn");

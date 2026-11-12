@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono, Instrument_Sans } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono, Instrument_Sans, Outfit } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import { esMX } from '@clerk/localizations';
 import Script from 'next/script';
@@ -31,6 +31,13 @@ const instrumentSans = Instrument_Sans({
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
+});
+
+// Solo para el texto del logo (components/brand/posib-logo.css).
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+  weight: ["400", "600"],
 });
 
 const SITE_DESCRIPTION =
@@ -77,8 +84,7 @@ export const metadata: Metadata = {
     siteName: 'posib.dev',
     images: [
       {
-        url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
-        secureUrl: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'posib.dev - Sistema POS para tiendas en Colombia',
@@ -92,7 +98,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
+        url: '/og-image.png',
         alt: 'posib.dev - Sistema POS para tiendas en Colombia',
       }
     ],
@@ -109,13 +115,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png', type: 'image/png' },
+      { url: '/posib-icono.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico', sizes: '32x32' },
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png', type: 'image/png' },
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   appleWebApp: {
@@ -143,7 +149,7 @@ const jsonLd = {
   description: SITE_DESCRIPTION,
   url: 'https://posib.dev',
   inLanguage: 'es-CO',
-  image: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
+  image: 'https://posib.dev/icon-512x512.png',
   areaServed: {
     '@type': 'Country',
     name: 'Colombia',
@@ -173,14 +179,22 @@ export default function RootLayout({
   return (
     // Español para todo lo que dibuja Clerk (menú de usuario, inicio de sesión, cuenta).
     // No hay variante es-CO; es-MX es la más cercana.
-    <ClerkProvider localization={esMX}>
+    <ClerkProvider
+      localization={esMX}
+      appearance={{
+        // Logo nuevo en todos los formularios de Clerk (sustituye al que
+        // estaba configurado en el panel de Clerk).
+        layout: { logoImageUrl: '/posib-logo.svg', logoPlacement: 'inside' },
+        elements: { logoBox: 'h-10', logoImage: 'h-10 w-auto' },
+      }}
+    >
       <html lang="es" suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
           <script dangerouslySetInnerHTML={{ __html: ACCENT_INIT_SCRIPT }} />
         </head>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} ${instrumentSans.variable} ${bricolage.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${instrumentSans.variable} ${bricolage.variable} ${outfit.variable} antialiased`}
         >
           {/* JSON-LD para SEO: se sirve en el HTML del servidor y lo leen los
               bots del DOM; no necesita ejecutarse como JS, por eso es un

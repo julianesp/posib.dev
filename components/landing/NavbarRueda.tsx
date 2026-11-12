@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
-import Image from "next/image";
+import PosibLogo from "@/components/brand/posib-logo";
 import { setManualTheme } from "@/lib/theme";
 import { useIsDark } from "@/lib/use-is-dark";
 import styles from "./NavbarRueda.module.scss";
@@ -143,33 +143,13 @@ export default function NavbarRueda() {
     <nav className={`top-0 z-50 ${styles.navbar}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex items-center justify-center h-16">
-          {/* Logo a la izquierda */}
+          {/* Logo a la izquierda: se arma la "p" (palo, aro, punto) y a
+              continuación aparece "osib.dev", que completa "posib.dev". */}
           <div className="absolute left-0 z-[70]">
-            <Link href="/" aria-label="posib.dev — inicio">
-              <Image
-                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png"
-                alt="posib.dev logo"
-                width={40}
-                height={40}
-                className="rounded-lg"
-                style={{ mixBlendMode: dark ? "screen" : "multiply" }}
-              />
+            <Link href="/" aria-label="posib.dev — inicio" className={styles.logoLink}>
+              <PosibLogo size={36} enter joined />
             </Link>
           </div>
-
-          {/* Marca centrada */}
-          <Link href="/" className={styles.logoLink}>
-            {/* Luz recorriendo el contorno de las letras (.brand-trace en globals.css) */}
-            <span
-              className={`brand-trace text-xl md:text-2xl font-bold ${
-                dark ? "text-white text-outline-dark" : "text-brand"
-              }`}
-              data-text="posib.dev"
-              translate="no"
-            >
-              posib.dev
-            </span>
-          </Link>
 
           {/* Botones a la derecha: tema + hamburguesa */}
           <div className="absolute right-0 z-[70] flex items-center gap-2">

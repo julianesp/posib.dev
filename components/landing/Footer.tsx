@@ -1,12 +1,10 @@
 import Image from "next/image";
+import PosibLogo from "@/components/brand/posib-logo";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Mail, MessageCircle } from "lucide-react";
 import { landingConfig } from "@/lib/landing-config";
 
 const { contact } = landingConfig;
-
-// Mismo logo que la barra de navegación (NavbarRueda).
-const LOGO_URL = "https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png";
 
 // Los enlaces van en blanco y pasan a verde agua al pasar el mouse. El
 // `!` es necesario porque el tema global fuerza el color del texto; antes el
@@ -69,13 +67,8 @@ export default function Footer() {
               aria-label={`${landingConfig.brand.name} — inicio`}
               className="inline-flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800"
             >
-              {/* Fondo blanco: el logo es oscuro y se perdería sobre el gris */}
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm">
-                <Image src={LOGO_URL} alt="" width={36} height={36} />
-              </span>
-              <span className="text-2xl font-bold !text-white" translate="no">
-                {landingConfig.brand.name}
-              </span>
+              {/* La "p" del ícono es la primera letra: se lee "posib.dev" */}
+              <PosibLogo size={44} joined tone="dark" />
             </Link>
             <p className="text-sm font-medium !text-white">
               {landingConfig.brand.tagline}

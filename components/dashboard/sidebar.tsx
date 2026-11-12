@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import PosibLogo from "@/components/brand/posib-logo";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
@@ -662,14 +662,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
             {isSuperAdmin ? (
               <h1 className="text-xl font-bold">Admin Panel</h1>
             ) : (
-              <Image
-                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png"
-                alt="posib.dev"
-                width={120}
-                height={40}
-                className="h-10 w-auto max-w-none"
-                priority
-              />
+              <PosibLogo size={36} />
             )}
           </div>
         )}
@@ -680,14 +673,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         {isSuperAdmin ? (
           <h1 className="text-xl font-bold">Admin Panel</h1>
         ) : (
-          <Image
-            src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png"
-            alt="posib.dev"
-            width={120}
-            height={40}
-            className="h-10 w-auto"
-            priority
-          />
+          <PosibLogo size={36} />
         )}
 
         {/* Botón de cerrar (solo móvil) */}

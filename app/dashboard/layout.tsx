@@ -1,5 +1,6 @@
 "use client";
 
+import DashboardLoader from "@/components/brand/dashboard-loader";
 import { useState, useEffect, useSyncExternalStore } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
@@ -407,6 +408,7 @@ function DashboardLayoutInner({
         user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" &&
         <TrialNotificationWrapper />}
       <div className="app-shell flex h-screen overflow-hidden">
+        <DashboardLoader show={loading} />
         <Sidebar />
 
         {/* Mobile sidebar overlay */}
