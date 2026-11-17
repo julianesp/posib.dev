@@ -8,6 +8,7 @@ import { useBusinessType } from "@/hooks/useBusinessType";
 function NewProductContent() {
   const searchParams = useSearchParams();
   const supplierId = searchParams.get("supplier_id");
+  const barcode = searchParams.get("barcode");
   const bt = useBusinessType();
 
   return (
@@ -22,7 +23,14 @@ function NewProductContent() {
       </div>
 
       <ProductForm
-        initialData={supplierId ? { supplier_id: supplierId } : undefined}
+        initialData={
+          supplierId || barcode
+            ? {
+                ...(supplierId ? { supplier_id: supplierId } : {}),
+                ...(barcode ? { barcode } : {}),
+              }
+            : undefined
+        }
       />
     </div>
   );

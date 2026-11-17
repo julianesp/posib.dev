@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers, FileSpreadsheet, ClipboardCheck } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers, FileSpreadsheet, ClipboardCheck, ScanBarcode, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +23,13 @@ import { findDuplicateGroups, findRepeatedNameGroups } from '@/lib/duplicate-hel
 import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
 import { MoreActions } from '@/components/products/more-actions';
 import { useBusinessType } from '@/hooks/useBusinessType';
+import { normalizeBarcode } from '@/lib/barcode-utils';
+
+// Cámara del celular (solo en el navegador)
+const BarcodeScanner = dynamic(
+  () => import('@/components/barcode-scanner').then((mod) => ({ default: mod.BarcodeScanner })),
+  { ssr: false }
+);
 
 // La API devuelve `images` como un string JSON (ej: '["https://..."]').
 // Esta función lo convierte en un array real de URLs, soportando también
@@ -60,6 +69,20 @@ function normalizeImages(
 const SUSPICIOUS_PRICE = 100;
 const needsPriceReview = (p: { sale_price: number }) => p.sale_price < SUSPICIOUS_PRICE;
 
+// Busca el producto cuyo código coincide exactamente con lo escaneado.
+// Si no hay coincidencia exacta, prueba ignorando ceros a la izquierda
+// (algunos lectores/Excel los quitan o los agregan).
+function findByScannedCode<T extends { barcode?: string | null }>(products: T[], raw: string): T | undefined {
+  const code = normalizeBarcode(raw);
+  if (!code) return undefined;
+  const exact = products.find((p) => normalizeBarcode(p.barcode) === code);
+  if (exact) return exact;
+  const stripped = code.replace(/^0+/, '');
+  if (!stripped) return undefined;
+  const matches = products.filter((p) => (normalizeBarcode(p.barcode) || '').replace(/^0+/, '') === stripped);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 export default function ProductsPage() {
   const { getToken, userId } = useAuth();
   const bt = useBusinessType();
@@ -67,6 +90,13 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // Modo "escanear para editar": campo grande para el lector USB + opción de cámara
+  const [scanMode, setScanMode] = useState(false);
+  const [scanValue, setScanValue] = useState('');
+  const [showCamera, setShowCamera] = useState(false);
+  const scanInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [showPriceReview, setShowPriceReview] = useState(false);
@@ -272,6 +302,90 @@ export default function ProductsPage() {
   // Calcular productos agotados (stock = 0)
   const outOfStockCount = products.filter(p => p.stock === 0 && tracksInventory(p)).length;
 
+  const openScannedCode = (raw: string) => {
+    const value = raw.trim();
+    if (!value || loading) return;
+    const found = findByScannedCode(products, value);
+    if (found) {
+      router.push(`/dashboard/products/${found.id}`);
+      return;
+    }
+    // Sin código exacto: si lo escrito deja un solo resultado, abrir ese.
+    const q = value.toLowerCase();
+    const matches = products.filter((p) =>
+      p.name.toLowerCase().includes(q) || p.barcode?.toLowerCase().includes(q)
+    );
+    if (matches.length === 1) {
+      router.push(`/dashboard/products/${matches[0].id}`);
+      return;
+    }
+    const code = normalizeBarcode(value);
+    if (code && /\d{4,}/.test(code) && matches.length === 0) {
+      SwalOriginal.fire({
+        icon: 'question',
+        title: 'Código no registrado',
+        html: `No hay ningún producto con el código <b>${code}</b>.<br/>¿Quieres crearlo?`,
+        showCancelButton: true,
+        confirmButtonText: 'Crear producto',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3b82f6',
+        returnFocus: false,
+      }).then((r) => {
+        if (r.isConfirmed) {
+          router.push(`/dashboard/products/new?barcode=${encodeURIComponent(code)}`);
+        } else {
+          setSearchTerm('');
+          searchInputRef.current?.focus();
+        }
+      });
+    }
+  };
+
+  // Escanear con el lector abre el producto para editarlo.
+  // Si se escanea sin tener el cursor en el buscador, se capta igual:
+  // el lector "teclea" muy rápido y termina con Enter.
+  useEffect(() => {
+    let buffer = '';
+    let lastKeyAt = 0;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (document.querySelector('.swal2-container, [role="dialog"]')) return;
+
+      const now = Date.now();
+      if (now - lastKeyAt > 80) buffer = '';
+      lastKeyAt = now;
+
+      if (e.key === 'Enter') {
+        if (buffer.length >= 4) {
+          e.preventDefault();
+          const code = buffer;
+          buffer = '';
+          setSearchTerm(code);
+          openScannedCode(code);
+        }
+        buffer = '';
+        return;
+      }
+      if (e.key.length === 1) buffer += e.key;
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+
+  useEffect(() => {
+    if (scanMode) scanInputRef.current?.focus();
+  }, [scanMode]);
+
+  // Con teclado físico (computador) el buscador queda listo para escanear.
+  useEffect(() => {
+    if (!loading && window.matchMedia('(pointer: fine)').matches) {
+      searchInputRef.current?.focus();
+    }
+  }, [loading]);
+
   return (
     <>
       <CategoryManagerModal
@@ -286,6 +400,16 @@ export default function ProductsPage() {
         products={products}
         onUpdate={fetchProducts}
       />
+
+      {showCamera && (
+        <BarcodeScanner
+          onScan={(code) => {
+            setShowCamera(false);
+            openScannedCode(code);
+          }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
 
       <RepeatedNamesModal
         isOpen={showRepeatedNamesModal}
@@ -407,13 +531,87 @@ export default function ProductsPage() {
             <div data-guide="products-search" className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Buscar por nombre o código de barras..."
+                ref={searchInputRef}
+                placeholder="Buscar o escanear el código para editar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    openScannedCode(searchTerm);
+                  }
+                }}
+                autoComplete="off"
+                enterKeyHint="search"
                 className="pl-10"
               />
             </div>
+            <Button
+              type="button"
+              variant={scanMode ? 'default' : 'outline'}
+              onClick={() => {
+                setScanValue('');
+                setScanMode((v) => !v);
+              }}
+              className="shrink-0"
+            >
+              <ScanBarcode className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Escanear código</span>
+            </Button>
           </div>
+
+          {scanMode && (
+            <div className="mt-4 rounded-xl border-2 border-dashed border-brand/50 bg-brand/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold flex items-center gap-2">
+                    <ScanBarcode className="h-5 w-5 text-brand" />
+                    Escanear para editar
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Pasa el producto por el lector de código de barras y se abre listo para cambiarle precio, stock o lo que necesites.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Cerrar"
+                  onClick={() => setScanMode(false)}
+                  className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                <Input
+                  ref={scanInputRef}
+                  value={scanValue}
+                  onChange={(e) => setScanValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const v = scanValue;
+                      setScanValue('');
+                      openScannedCode(v);
+                    }
+                  }}
+                  placeholder="Esperando el lector... (o escribe el código y Enter)"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  enterKeyHint="go"
+                  className="h-12 text-lg font-mono bg-white"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12"
+                  onClick={() => setShowCamera(true)}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Usar cámara
+                </Button>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {/* Filtros de categoría */}
