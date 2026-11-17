@@ -28,6 +28,7 @@ import BackToTop from "@/components/landing/BackToTop";
 import AuthCtas from "@/components/landing/AuthCtas";
 import PricingPlans from "@/components/landing/PricingPlans";
 import WhyPosib from "@/components/landing/WhyPosib";
+import ProblemsSolved from "@/components/landing/ProblemsSolved";
 import ProcessShowcase from "@/components/landing/process-showcase/ProcessShowcase";
 import FreeMigration from "@/components/landing/FreeMigration";
 import TrustBadges from "@/components/landing/TrustBadges";
@@ -163,6 +164,11 @@ export default function Home() {
             </div>
           </div>
         </section>
+      </FadeInSection>
+
+      {/* Problemas de la tienda de barrio y cómo los resuelve posib */}
+      <FadeInSection>
+        <ProblemsSolved />
       </FadeInSection>
 
       {/* Demos animadas de cada proceso (registrar producto, vender, fiados, etc.) */}
