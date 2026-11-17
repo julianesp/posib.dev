@@ -5,12 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Crear un Intl.NumberFormat es costoso: con catálogos de miles de productos
+// (el POS dibuja dos precios por tarjeta) se notaba en equipos lentos.
+const COP_FORMATTER = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  minimumFractionDigits: 0,
+});
+
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(amount);
+  return COP_FORMATTER.format(amount);
 }
 
 // Algunos registros legacy guardaban las fechas como Firestore Timestamp

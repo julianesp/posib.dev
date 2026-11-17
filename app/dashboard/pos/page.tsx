@@ -124,6 +124,9 @@ interface HeldSale {
 
 const MAX_HELD_SALES = 8;
 
+/** Tarjetas de producto que la grilla del POS dibuja por tanda. */
+const PRODUCTS_PAGE = 48;
+
 // Modo práctica (ver POSPage): claves en sessionStorage y prefijo de los
 // productos temporales que se crean sin guardarse en el inventario.
 const PRACTICE_MODE_KEY = "pos_practice_mode";
@@ -157,7 +160,13 @@ export default function POSPage() {
   // En el celular el carrito es un panel lateral que se abre con un botón
   const [cartOpen, setCartOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [barcodeInput, setBarcodeInput] = useState("");
+  // El campo del lector USB NO es un estado de React: el lector "teclea" el
+  // código dígito por dígito y con un estado cada dígito redibujaba el POS
+  // completo (con miles de productos tardaba más de 10 s en un portátil
+  // sencillo). Se lee y se limpia directamente en el input.
+  const setBarcodeInput = (value: string) => {
+    if (barcodeRef.current) barcodeRef.current.value = value;
+  };
   const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
   const [paymentMethod, setPaymentMethod] =
     useState<PosPaymentMethod>("efectivo");
@@ -648,13 +657,18 @@ export default function POSPage() {
     }
   }, [getToken]);
 
+  const offersByProduct = React.useMemo(() => {
+    const map = new Map<string, Offer>();
+    for (const offer of activeOffers) {
+      if (offer.is_active === 1 && !map.has(offer.product_id)) {
+        map.set(offer.product_id, offer);
+      }
+    }
+    return map;
+  }, [activeOffers]);
   const getProductOffer = useCallback(
-    (productId: string): Offer | undefined => {
-      return activeOffers.find(
-        (offer) => offer.product_id === productId && offer.is_active === 1,
-      );
-    },
-    [activeOffers],
+    (productId: string): Offer | undefined => offersByProduct.get(productId),
+    [offersByProduct],
   );
 
   const getProductWithOffer = useCallback(
@@ -765,6 +779,7 @@ export default function POSPage() {
 
   const handleBarcodeSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    const barcodeInput = barcodeRef.current?.value ?? "";
     if (!barcodeInput.trim()) return;
 
     console.log("🔍 [LECTOR USB] Código recibido:", barcodeInput);
@@ -2076,6 +2091,15 @@ export default function POSPage() {
     }
   };
 
+  // La grilla dibuja los productos por tandas: con miles de productos,
+  // dibujarlos todos hacía lento cada cambio de la pantalla. Al bajar en la
+  // lista se agregan más; buscar o cambiar de categoría vuelve a empezar.
+  const listKey = `${searchTerm}|${selectedCategory}`;
+  const [productsPage, setProductsPage] = useState({ key: listKey, count: PRODUCTS_PAGE });
+  const visibleCount = productsPage.key === listKey ? productsPage.count : PRODUCTS_PAGE;
+  const showMoreProducts = () =>
+    setProductsPage({ key: listKey, count: visibleCount + PRODUCTS_PAGE });
+
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name
       .toLowerCase()
@@ -2434,8 +2458,7 @@ export default function POSPage() {
                     <div className="relative">
                       <Input
                         ref={barcodeRef}
-                        value={barcodeInput}
-                        onChange={(e) => setBarcodeInput(e.target.value)}
+                        defaultValue=""
                         placeholder="Escanea aquí el código de barras..."
                         className={`h-12 md:h-14 text-xs md:text-sm font-mono tracking-wider border-2 focus:ring-2 pl-10 md:pl-12 transition-colors ${
                           scanSuccess
@@ -2566,9 +2589,21 @@ export default function POSPage() {
                 })()}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
+              <div
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto"
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  if (
+                    visibleCount < filteredProducts.length &&
+                    el.scrollTop + el.clientHeight >= el.scrollHeight - 300
+                  ) {
+                    showMoreProducts();
+                  }
+                }}
+              >
                 {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => {
+                  <>
+                  {filteredProducts.slice(0, visibleCount).map((product) => {
                     const offer = getProductOffer(product.id);
                     const hasOffer = offer && offer.discount_percentage > 0;
                     const originalPrice = product.sale_price;
@@ -2673,7 +2708,17 @@ export default function POSPage() {
                         </CardContent>
                       </Card>
                     );
-                  })
+                  })}
+                  {visibleCount < filteredProducts.length && (
+                    <button
+                      type="button"
+                      onClick={showMoreProducts}
+                      className="col-span-full rounded-lg border border-dashed border-gray-300 py-2 text-xs font-medium text-gray-800 hover:border-brand hover:text-brand"
+                    >
+                      Ver más productos ({filteredProducts.length - visibleCount} más)
+                    </button>
+                  )}
+                  </>
                 ) : (
                   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
