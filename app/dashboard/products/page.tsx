@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -68,6 +68,10 @@ function normalizeImages(
 // mal digitado (ej. 2 en vez de 2.000) o un producto sin precio.
 const SUSPICIOUS_PRICE = 100;
 const needsPriceReview = (p: { sale_price: number }) => p.sale_price < SUSPICIOUS_PRICE;
+
+// La lista se dibuja por tandas: con ~2.000 productos (caso Saira, Acer básico)
+// dibujarlos todos, con foto y dos veces (tabla + tarjetas), tardaba segundos.
+const PRODUCTS_PAGE = 50;
 
 // Busca el producto cuyo código coincide exactamente con lo escaneado.
 // Si no hay coincidencia exacta, prueba ignorando ceros a la izquierda
@@ -287,20 +291,66 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
-    const matchesOutOfStock = !showOutOfStock || (product.stock === 0 && tracksInventory(product));
-    const matchesPriceReview = !showPriceReview || needsPriceReview(product);
-    return matchesSearch && matchesCategory && matchesOutOfStock && matchesPriceReview;
+  // El texto en minúsculas se calcula una sola vez por carga, no en cada tecla.
+  const searchIndex = useMemo(
+    () => products.map((p) => `${p.name.toLowerCase()}\u0000${(p.barcode || '').toLowerCase()}`),
+    [products]
+  );
+
+  // Escribir en el buscador no bloquea: el filtrado va un paso detrás.
+  const deferredSearch = useDeferredValue(searchTerm);
+
+  const filteredProducts = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+    return products.filter((product, i) => {
+      if (q && !searchIndex[i].includes(q)) return false;
+      if (selectedCategory !== 'all' && product.category_id !== selectedCategory) return false;
+      if (showOutOfStock && !(product.stock === 0 && tracksInventory(product))) return false;
+      if (showPriceReview && !needsPriceReview(product)) return false;
+      return true;
+    });
+  }, [products, searchIndex, deferredSearch, selectedCategory, showOutOfStock, showPriceReview]);
+
+  // Contadores en una sola pasada (antes: un recorrido completo por categoría en cada render)
+  const { priceReviewCount, outOfStockCount, countByCategory } = useMemo(() => {
+    let priceReview = 0;
+    let outOfStock = 0;
+    const byCategory = new Map<string, number>();
+    for (const p of products) {
+      if (needsPriceReview(p)) priceReview++;
+      if (p.stock === 0 && tracksInventory(p)) outOfStock++;
+      if (p.category_id) byCategory.set(p.category_id, (byCategory.get(p.category_id) || 0) + 1);
+    }
+    return { priceReviewCount: priceReview, outOfStockCount: outOfStock, countByCategory: byCategory };
+  }, [products]);
+
+  // Tandas: buscar o cambiar de filtro vuelve a empezar; al bajar se agregan más.
+  const listKey = `${deferredSearch}|${selectedCategory}|${showOutOfStock}|${showPriceReview}`;
+  const [productsPage, setProductsPage] = useState({ key: listKey, count: PRODUCTS_PAGE });
+  const visibleCount = productsPage.key === listKey ? productsPage.count : PRODUCTS_PAGE;
+  const showMoreProducts = () =>
+    setProductsPage({ key: listKey, count: visibleCount + PRODUCTS_PAGE });
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hasMoreProducts = visibleCount < filteredProducts.length;
+
+  // Carga la siguiente tanda sola cuando el final de la lista se acerca a la pantalla.
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const showMoreRef = useRef(showMoreProducts);
+  useEffect(() => {
+    showMoreRef.current = showMoreProducts;
   });
-
-  // Precios por revisar: en $0 o sospechosamente bajos (ej. importados de Siigo "en miles")
-  const priceReviewCount = products.filter(needsPriceReview).length;
-
-  // Calcular productos agotados (stock = 0)
-  const outOfStockCount = products.filter(p => p.stock === 0 && tracksInventory(p)).length;
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !hasMoreProducts) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) showMoreRef.current();
+      },
+      { rootMargin: '600px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMoreProducts, visibleCount, listKey]);
 
   const openScannedCode = (raw: string) => {
     const value = raw.trim();
@@ -628,7 +678,7 @@ export default function ProductsPage() {
                 Todos ({products.length})
               </button>
               {categories.map((category) => {
-                const categoryCount = products.filter(p => p.category_id === category.id).length;
+                const categoryCount = countByCategory.get(category.id) || 0;
                 return (
                   <button
                     key={category.id}
@@ -671,7 +721,7 @@ export default function ProductsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProducts.map((product) => (
+                    {visibleProducts.map((product) => (
                       <tr key={product.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="relative w-12 h-12 bg-gray-100 rounded border overflow-hidden">
@@ -735,7 +785,7 @@ export default function ProductsPage() {
 
               {/* Vista de cards para móvil y tablet */}
               <div className="lg:hidden space-y-4">
-                {filteredProducts.map((product) => (
+                {visibleProducts.map((product) => (
                   <Card key={product.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex gap-4">
@@ -826,6 +876,18 @@ export default function ProductsPage() {
                   </Card>
                 ))}
               </div>
+
+              {hasMoreProducts && (
+                <div ref={loadMoreRef} className="pt-4">
+                  <button
+                    type="button"
+                    onClick={showMoreProducts}
+                    className="w-full rounded-lg border border-dashed border-gray-300 py-3 text-sm font-medium text-gray-800 hover:border-brand hover:text-brand"
+                  >
+                    Ver más productos ({filteredProducts.length - visibleCount} más)
+                  </button>
+                </div>
+              )}
             </>
           )}
         </CardContent>
