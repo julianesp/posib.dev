@@ -7,7 +7,9 @@
  *   - cuánto vendió y ganó, comparado con el mes anterior;
  *   - qué productos no le pueden faltar (los más vendidos) y cuáles pedir ya;
  *   - qué días y horas se vende más, cómo le pagan y cuánto quedó fiado;
- *   - qué mercancía no se movió (plata quieta).
+ *   - qué mercancía no se movió (plata quieta);
+ *   - cuánto lleva en el año, a cuánto cerraría y si le tocaría facturar
+ *     electrónicamente (tope de 3.500 UVT de la DIAN).
  *
  * Todo se calcula en el navegador con las ventas y productos ya cacheados.
  */
@@ -16,6 +18,8 @@ import type jsPDF from "jspdf";
 import type { Product, Sale, SaleItem } from "./cloudflare-api";
 import { getItemCost, getItemRevenue } from "./profit-helpers";
 import { tracksInventory } from "./types";
+// Única fuente de la UVT por año (también la usa el Worker para las alertas).
+import { E_INVOICE_UVT, uvtFor } from "../cloudflare-migration/src/utils/dian-thresholds";
 
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -122,7 +126,43 @@ export interface MonthlyReport {
   topByProfit: ProductLine[];
   reorder: ProductLine[];
   idle: { count: number; value: number; examples: string[] };
+  /** Acumulado del año del informe hasta el mes del informe (incluido). */
+  year: YearToDate;
   tips: string[];
+}
+
+export interface YearToDate {
+  year: number;
+  /** De enero al mes del informe. */
+  months: Array<{ month: number; revenue: number }>;
+  total: number;
+  /** Promedio de los meses desde el primero con ventas; null sin ventas. */
+  avgPerMonth: number | null;
+  /** Cierre de año si sigue al promedio; null sin datos. */
+  projected: number | null;
+  /** Tope de facturación electrónica (3.500 UVT) de ese año. */
+  eInvoiceCap: number;
+  uvtEstimated: boolean;
+}
+
+/** Ventas del año del informe, mes a mes, y proyección al cierre. */
+export function buildYearToDate(allSales: Sale[], m: ReportMonth): YearToDate {
+  const months = Array.from({ length: m.month + 1 }, (_, i) => ({ month: i, revenue: 0 }));
+  for (const sale of allSales) {
+    if (!isValidSale(sale)) continue;
+    const d = saleDate(sale.created_at);
+    if (d.getFullYear() !== m.year || d.getMonth() > m.month) continue;
+    months[d.getMonth()].revenue += Number(sale.total) || 0;
+  }
+  const total = months.reduce((sum, x) => sum + x.revenue, 0);
+  // Una tienda que empezó en posib a mitad de año no tiene ventas antes: no
+  // se cuentan esos meses en el promedio.
+  const first = months.findIndex((x) => x.revenue > 0);
+  const counted = first === -1 ? 0 : m.month - first + 1;
+  const avgPerMonth = counted > 0 ? total / counted : null;
+  const projected = avgPerMonth === null ? null : Math.round(total + avgPerMonth * (11 - m.month));
+  const { uvt, estimated } = uvtFor(m.year);
+  return { year: m.year, months, total, avgPerMonth, projected, eInvoiceCap: E_INVOICE_UVT * uvt, uvtEstimated: estimated };
 }
 
 export interface MonthSummary {
@@ -301,6 +341,7 @@ export function buildMonthlyReport(
     topByProfit,
     reorder,
     idle,
+    year: buildYearToDate(allSales, m),
     tips: [],
   };
   report.tips = buildTips(report);
@@ -334,6 +375,14 @@ function buildTips(r: MonthlyReport): string[] {
   }
   if (r.credit.pending > 0) {
     tips.push(`Quedan ${cop(r.credit.pending)} fiados por cobrar de este mes. Revise la lista de deudores.`);
+  }
+  const y = r.year;
+  if (y.projected !== null && y.projected >= y.eInvoiceCap * 0.7) {
+    tips.push(
+      y.total >= y.eInvoiceCap
+        ? `Ya vendió ${cop(y.total)} en ${y.year}, más que el tope de la DIAN: debe facturar electrónicamente. Hable con su contador.`
+        : `A este ritmo cerraría ${y.year} con unos ${cop(y.projected)}${y.projected >= y.eInvoiceCap ? ", por encima" : ", cerca"} del tope de ${cop(y.eInvoiceCap)} para facturar electrónicamente. Prepárese con su contador.`,
+    );
   }
   if (r.profit === null) {
     tips.push("Agregue el precio de compra a sus productos para ver cuánto gana realmente cada mes.");
@@ -604,6 +653,43 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
   if (r.credit.count > 0) {
     paragraph(
       `Fió ${num(r.credit.count)} ${r.credit.count === 1 ? "venta" : "ventas"} por ${cop(r.credit.total)}; de eso quedan ${cop(r.credit.pending)} por cobrar.`,
+    );
+  }
+
+  // Acumulado del año y tope de la DIAN
+  const yr = r.year;
+  if (yr.total > 0) {
+    section(
+      `Cuánto lleva vendido en ${yr.year}`,
+      "Sirve para saber a cuánto cerraría el año y si le tocaría facturar electrónicamente.",
+    );
+    table(
+      ["Mes", "Vendido"],
+      yr.months
+        .filter((x) => x.revenue > 0)
+        .map((x) => [MONTHS[x.month].charAt(0).toUpperCase() + MONTHS[x.month].slice(1), cop(x.revenue)]),
+      [118, 60],
+      ["left", "right"],
+    );
+    paragraph(`Total del año hasta ${MONTHS[r.month.month]}: ${cop(yr.total)}.`, 10, INK);
+    if (yr.avgPerMonth !== null && yr.projected !== null && r.month.month < 11) {
+      paragraph(
+        `Vende en promedio ${cop(yr.avgPerMonth)} al mes. Si sigue así, cerraría ${yr.year} con unos ${cop(yr.projected)}.`,
+      );
+    }
+    const closing = yr.projected ?? yr.total;
+    const capText = `El tope para facturar electrónicamente en ${yr.year} es ${cop(yr.eInvoiceCap)} (3.500 UVT)`;
+    if (yr.total >= yr.eInvoiceCap) {
+      paragraph(`${capText} y ya lo superó: debe expedir factura electrónica y es responsable de IVA. Hable con su contador.`, 10, WARN);
+    } else if (closing >= yr.eInvoiceCap) {
+      paragraph(`${capText}. A este ritmo lo pasaría antes de terminar el año: prepárese desde ya con su contador.`, 10, WARN);
+    } else {
+      paragraph(`${capText}. A este ritmo le quedarían unos ${cop(yr.eInvoiceCap - closing)} de margen.`);
+    }
+    paragraph(
+      `Calculado solo con las ventas registradas en posib. La DIAN cuenta todos sus ingresos: confírmelo con su contador.${yr.uvtEstimated ? ` La UVT de ${yr.year} aún no está publicada; se usó la del año anterior.` : ""}`,
+      8,
+      MUTED,
     );
   }
 

@@ -18,6 +18,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  GraduationCap,
 } from "lucide-react";
 // import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ import {
 } from "@/lib/cloudflare-credit-helpers";
 import { posibLogoIconHtml } from "@/components/brand/posib-logo-html";
 import Swal from "@/lib/sweetalert";
+import { toast } from "sonner";
 import { BarcodeScannerZXing } from "@/components/products/barcode-scanner-zxing";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
 import { UnitSelectorModal } from "@/components/pos/unit-selector-modal";
@@ -121,6 +123,13 @@ interface HeldSale {
 }
 
 const MAX_HELD_SALES = 8;
+
+// Modo práctica (ver POSPage): claves en sessionStorage y prefijo de los
+// productos temporales que se crean sin guardarse en el inventario.
+const PRACTICE_MODE_KEY = "pos_practice_mode";
+const PRACTICE_COUNT_KEY = "pos_practice_count";
+const PRACTICE_ID_PREFIX = "practica-";
+const isPracticeProduct = (p: Product) => p.id.startsWith(PRACTICE_ID_PREFIX);
 
 /** Se muestra en el POS: activo y con stock (o sin control de inventario). */
 const isSellable = (p: Product) =>
@@ -252,6 +261,64 @@ export default function POSPage() {
       window.removeEventListener("scroll", update, true);
     };
   }, []);
+
+  // Modo práctica: las ventas se simulan en el navegador. No se guardan en el
+  // Worker, no descuentan inventario, no suman puntos ni deuda y no aparecen en
+  // los reportes. Sirve para aprender a usar el POS (o enseñarle a un empleado)
+  // sin tocar los datos reales. Vive en sessionStorage: al cerrar el navegador
+  // vuelve el modo normal, para que nadie se quede vendiendo "de mentiras".
+  const [practiceMode, setPracticeMode] = useState(false);
+  const [practiceCount, setPracticeCount] = useState(0);
+  useEffect(() => {
+    try {
+      setPracticeMode(sessionStorage.getItem(PRACTICE_MODE_KEY) === "1");
+      setPracticeCount(
+        Number(sessionStorage.getItem(PRACTICE_COUNT_KEY) || "0") || 0,
+      );
+    } catch {
+      /* sin sessionStorage: modo normal */
+    }
+  }, []);
+  const togglePracticeMode = async () => {
+    const next = !practiceMode;
+    if (next) {
+      const result = await Swal.custom({
+        title: "Modo práctica",
+        html: `
+          <div class="text-left space-y-2 text-sm text-gray-800">
+            <p>Vende como siempre para aprender o enseñarle a alguien a usar el sistema.</p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Las ventas <strong>no se guardan</strong> ni aparecen en reportes.</li>
+              <li><strong>No se descuenta inventario</strong>, ni se suman puntos o fiados.</li>
+              <li>Los productos que registres aquí son temporales.</li>
+            </ul>
+            <p class="text-xs">Recuerda salir del modo práctica antes de atender clientes de verdad.</p>
+          </div>
+        `,
+        icon: "info",
+        showCancelButton: true,
+        confirmButtonText: "Empezar a practicar",
+        cancelButtonText: "Cancelar",
+      });
+      if (!result.isConfirmed) return;
+    }
+    setPracticeMode(next);
+    try {
+      if (next) sessionStorage.setItem(PRACTICE_MODE_KEY, "1");
+      else sessionStorage.removeItem(PRACTICE_MODE_KEY);
+    } catch {
+      /* ignorar */
+    }
+    if (!next) {
+      // Al salir se vacía el carrito: puede tener productos temporales.
+      setCart([]);
+      setSelectedCustomer(null);
+      setApplyDiscount(false);
+      setDiscountAmount(0);
+      setProducts((prev) => prev.filter((p) => !isPracticeProduct(p)));
+      toast.success("Modo práctica desactivado: las ventas vuelven a ser reales");
+    }
+  };
 
   // Ventas en espera (pestañas). La pestaña activa vive en los estados de arriba
   // (cart, selectedCustomer, paymentMethod...); heldSales guarda las demás.
@@ -1103,6 +1170,30 @@ export default function POSPage() {
       }
     }
 
+    // En modo práctica el producto es temporal: solo vive en esta pantalla.
+    if (practiceMode) {
+      const now = new Date().toISOString();
+      const temp = {
+        id: `${PRACTICE_ID_PREFIX}${Date.now()}`,
+        barcode: quickRegisterData.barcode.trim() || undefined,
+        name,
+        sale_price: salePrice,
+        cost_price: costPrice,
+        stock,
+        min_stock: 0,
+        sell_by_unit: false,
+        ...(noInventory ? { track_inventory: false } : {}),
+        created_at: now,
+        updated_at: now,
+      } as unknown as Product;
+      setProducts((prev) => [temp, ...prev]);
+      addToCart(temp, 1, false);
+      setShowQuickRegister(false);
+      toast.info(`${name} se agregó solo para practicar (no se guardó)`);
+      barcodeRef.current?.focus();
+      return;
+    }
+
     setQuickRegisterSaving(true);
     try {
       const barcode = quickRegisterData.barcode.trim()
@@ -1352,11 +1443,121 @@ export default function POSPage() {
     }
   };
 
+  // Venta de práctica: misma experiencia que una venta real (resumen y
+  // factura de ejemplo) pero sin ninguna llamada al Worker.
+  const processPracticeSale = async () => {
+    if (paymentMethod === "credito" && !selectedCustomer) {
+      Swal.warning(
+        "Cliente requerido",
+        "Para vender fiado hay que escoger un cliente. En la práctica no se le suma la deuda.",
+      );
+      return;
+    }
+
+    const subtotal = cart.reduce((sum, item) => {
+      const price = item.effectivePrice || item.product.sale_price;
+      return sum + price * item.quantity;
+    }, 0);
+    const total = subtotal;
+    const count = practiceCount + 1;
+    setPracticeCount(count);
+    try {
+      sessionStorage.setItem(PRACTICE_COUNT_KEY, String(count));
+    } catch {
+      /* ignorar */
+    }
+
+    const now = new Date().toISOString();
+    const sale: Sale = {
+      id: `${PRACTICE_ID_PREFIX}venta-${Date.now()}`,
+      sale_number: `PRUEBA-${count}`,
+      customer_id: selectedCustomer?.id,
+      cashier_id: "",
+      subtotal,
+      tax: 0,
+      discount: 0,
+      total,
+      payment_method: paymentMethod as Sale["payment_method"],
+      status: paymentMethod === "credito" ? "pendiente" : "completada",
+      notes: "Venta de práctica: no se guardó",
+      created_at: now,
+      updated_at: now,
+    };
+    const items: SaleItemWithProduct[] = cart.map((cartItem) => {
+      const price = cartItem.effectivePrice || cartItem.product.sale_price;
+      return {
+        id: "",
+        sale_id: sale.id,
+        product_id: cartItem.product.id,
+        quantity: cartItem.quantity,
+        unit_price: price,
+        discount: 0,
+        subtotal: price * cartItem.quantity,
+        created_at: now,
+        product: cartItem.product,
+      };
+    });
+    const customer = selectedCustomer;
+
+    // Limpiar antes del resumen, igual que tras una venta real.
+    setCart([]);
+    setSelectedCustomer(null);
+    setCanRedeem(false);
+    setApplyDiscount(false);
+    setDiscountAmount(0);
+    removeHeldSale(activeSaleIdRef.current);
+
+    await Swal.custom({
+      title: "Venta de práctica lista",
+      html: `
+        <p class="text-sm text-gray-800 mb-1">Venta de práctica #${count}</p>
+        <p class="text-xl font-bold text-brand mb-2">Total: ${formatCurrency(total)}</p>
+        ${customer ? `<p class="text-sm text-gray-800 mb-2">Cliente: <strong>${customer.name}</strong></p>` : ""}
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900 text-left">
+          🎓 Así se ve una venta. Como es de práctica, <strong>no se guardó</strong> ni se descontó del inventario.
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-200">
+          <button id="practice-invoice-btn" class="w-full bg-brand hover:bg-brand-hover text-white font-semibold py-2 px-4 rounded flex items-center justify-center gap-2">
+            📄 Ver factura de ejemplo
+          </button>
+        </div>
+      `,
+      icon: "success",
+      confirmButtonText: "Seguir practicando",
+      didOpen: () => {
+        document
+          .getElementById("practice-invoice-btn")
+          ?.addEventListener("click", () => {
+            Swal.close();
+            setLastSale(sale);
+            setLastSaleItems(items);
+            setLastSaleCustomer(customer);
+            setShowInvoiceModal(true);
+          });
+      },
+    });
+    barcodeRef.current?.focus();
+  };
+
   const processSale = async () => {
     if (cart.length === 0) {
       Swal.warning(
         "El carrito está vacío",
         "Agrega productos antes de procesar la venta",
+      );
+      return;
+    }
+
+    if (practiceMode) {
+      await processPracticeSale();
+      return;
+    }
+
+    // Un producto temporal de práctica no existe en el inventario real.
+    if (cart.some((i) => isPracticeProduct(i.product))) {
+      Swal.warning(
+        "Hay productos de práctica en el carrito",
+        "Quítalos o vuelve a activar el modo práctica para terminar esa venta.",
       );
       return;
     }
@@ -2131,6 +2332,43 @@ export default function POSPage() {
               </form>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Modo práctica: aviso fijo mientras está activo; si no, un botón discreto */}
+      {practiceMode ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-4 py-3 text-amber-900">
+          <GraduationCap className="h-6 w-6 shrink-0" />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-bold">Estás en modo práctica</p>
+            <p>
+              Las ventas no se guardan ni descuentan inventario
+              {practiceCount > 0
+                ? ` · ${practiceCount} ${practiceCount === 1 ? "venta" : "ventas"} de práctica`
+                : ""}
+              .
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={togglePracticeMode}
+            className="shrink-0 bg-amber-600 text-white hover:bg-amber-700"
+          >
+            Salir de la práctica
+          </Button>
+        </div>
+      ) : (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={togglePracticeMode}
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-800 hover:border-amber-400 hover:bg-amber-50"
+            title="Vende de mentiras para aprender, sin tocar inventario ni reportes"
+          >
+            <GraduationCap className="h-4 w-4" />
+            Modo práctica
+          </button>
         </div>
       )}
 
@@ -3115,7 +3353,11 @@ export default function POSPage() {
                       disabled={processing}
                     >
                       <DollarSign className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-                      {processing ? "Procesando..." : "Procesar Venta"}
+                      {processing
+                        ? "Procesando..."
+                        : practiceMode
+                          ? "Procesar venta de práctica"
+                          : "Procesar Venta"}
                     </Button>
                   </div>
                 </>

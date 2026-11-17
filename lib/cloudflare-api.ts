@@ -1020,6 +1020,8 @@ export interface DianThresholds {
   incomeTaxExceeded: boolean;
   level: DianLevel;
   alreadyInvoicing: boolean;
+  /** Ventas del año mes a mes (1 = enero), solo meses con ventas. Falta en Workers viejos. */
+  months?: Array<{ month: number; sales: number; count: number }>;
 }
 
 /** 403 si el usuario es del equipo y no tiene permiso para ver reportes. */

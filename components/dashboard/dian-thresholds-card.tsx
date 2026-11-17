@@ -55,6 +55,8 @@ export function DianThresholdsCard() {
   const [data, setData] = useState<DianThresholds | null>(null);
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState<boolean | null>(null);
+  // Mes en curso en hora Colombia (1 = enero).
+  const [currentMonth] = useState(() => new Date(Date.now() - 5 * 3600 * 1000).getUTCMonth() + 1);
   const detailsId = useId();
 
   useEffect(() => {
@@ -92,6 +94,20 @@ export function DianThresholdsCard() {
     }
   };
 
+  // Mes a mes, de enero al mes en curso (hora Colombia).
+  const byMonth = new Map((data.months ?? []).map((m) => [m.month, m.sales]));
+  const monthRows = data.months
+    ? Array.from({ length: currentMonth }, (_, i) => ({ month: i + 1, sales: byMonth.get(i + 1) ?? 0 }))
+    : [];
+  const maxMonth = Math.max(1, ...monthRows.map((m) => m.sales));
+  const thisMonthSales = byMonth.get(currentMonth) ?? 0;
+  // Promedio de los meses cerrados con ventas (el mes en curso va a medias).
+  const closedWithSales = monthRows.filter((m) => m.month < currentMonth && m.sales > 0);
+  const avgMonth = closedWithSales.length
+    ? closedWithSales.reduce((sum, m) => sum + m.sales, 0) / closedWithSales.length
+    : null;
+  const projected = data.projectedYearSales;
+
   const Icon = level === "obligado" ? AlertOctagon : level === "ok" ? Landmark : AlertTriangle;
   const isOpen = open ?? readOpen(level);
 
@@ -126,6 +142,11 @@ export function DianThresholdsCard() {
             <span className="font-num text-base font-semibold text-gray-900 md:text-lg">
               {formatCurrency(data.yearSales)}
             </span>
+            {data.months && (
+              <span className="text-xs text-gray-600">
+                · este mes <span className="font-num font-semibold text-gray-800">{formatCurrency(thisMonthSales)}</span>
+              </span>
+            )}
           </div>
           <div
             className="mt-1.5 h-1.5 max-w-xs overflow-hidden rounded-full bg-gray-200"
@@ -209,6 +230,52 @@ export function DianThresholdsCard() {
               <p className="text-sm text-gray-700">
                 A tu ritmo actual llegarías al tope alrededor del {formatDay(data.projectedCapDate)}.
               </p>
+            )}
+
+            {monthRows.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-gray-900">Vendido mes a mes</p>
+                <ul className="space-y-1">
+                  {monthRows.map((m) => (
+                    <li key={m.month} className="flex items-center gap-2 text-xs">
+                      <span className="w-16 shrink-0 capitalize text-gray-600">
+                        {MONTHS[m.month - 1].slice(0, 3)}
+                        {m.month === currentMonth ? " (va)" : ""}
+                      </span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                        <span
+                          className={`block h-full rounded-full ${m.month === currentMonth ? "bg-brand/50" : "bg-brand"}`}
+                          style={{ width: `${m.sales > 0 ? Math.max((m.sales / maxMonth) * 100, 2) : 0}%` }}
+                        />
+                      </span>
+                      <span className="font-num w-28 shrink-0 text-right tabular-nums text-gray-800">
+                        {formatCurrency(m.sales)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {(avgMonth !== null || projected !== null) && (
+                  <p className="text-sm text-gray-700">
+                    {avgMonth !== null && (
+                      <>
+                        En promedio vendes <span className="font-num font-semibold">{formatCurrency(avgMonth)}</span> al
+                        mes.{" "}
+                      </>
+                    )}
+                    {projected !== null && (
+                      <>
+                        Si sigues así, cerrarías {data.year} con unos{" "}
+                        <span className="font-num font-semibold">{formatCurrency(projected)}</span>
+                        {data.alreadyInvoicing
+                          ? "."
+                          : projected >= data.eInvoiceCap
+                            ? ", por encima del tope: tendrías que facturar electrónicamente."
+                            : `, ${formatCurrency(data.eInvoiceCap - projected)} por debajo del tope.`}
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
             )}
 
             {data.incomeTaxExceeded && (

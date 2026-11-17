@@ -190,6 +190,14 @@ describe('rutas y aviso diario', () => {
     });
   });
 
+  it('trae lo vendido mes a mes del año (hora Colombia, sin anuladas)', async () => {
+    const { json } = await call('clerk_dueno');
+    expect(json.data.months).toEqual([
+      { month: 1, sales: 100_000_000, count: 1 },
+      { month: 10, sales: 55_000_000, count: 2 },
+    ]);
+  });
+
   it('la cajera no ve las ventas del año; quien tiene permiso de reportes sí', async () => {
     expect((await call('clerk_cajera')).status).toBe(403);
     expect((await call('clerk_admin')).status).toBe(200);

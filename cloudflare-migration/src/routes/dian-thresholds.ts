@@ -59,6 +59,38 @@ function salesTotalsQuery(db: D1Database, year: number, tenantId?: string) {
     );
 }
 
+export interface MonthSales {
+  /** 1 = enero … 12 = diciembre (hora Colombia). */
+  month: number;
+  sales: number;
+  count: number;
+}
+
+/**
+ * Ventas del año en curso mes a mes (hora Colombia), sin canceladas. Solo
+ * vienen los meses con ventas; el front completa los demás con cero.
+ */
+async function monthlySales(db: D1Database, year: number, tenantId: string): Promise<MonthSales[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT CAST(strftime('%m', datetime(created_at, '-5 hours')) AS INTEGER) AS month,
+              COALESCE(SUM(total), 0) AS sales,
+              COUNT(*) AS count
+       FROM sales
+       WHERE tenant_id = ?1 AND status != 'cancelada'
+         AND datetime(created_at) >= ?2 AND datetime(created_at) < ?3
+       GROUP BY month
+       ORDER BY month`
+    )
+    .bind(tenantId, toSqlUtc(coYearStart(year)), toSqlUtc(coYearStart(year + 1)))
+    .all<{ month: number; sales: number; count: number }>();
+  return (results ?? []).map((r) => ({
+    month: Number(r.month),
+    sales: Math.round(Number(r.sales) || 0),
+    count: Number(r.count) || 0,
+  }));
+}
+
 function evaluate(row: SalesTotals | null | undefined, year: number, alreadyInvoicing: boolean, now: number) {
   return evaluateDianThresholds(
     {
@@ -107,16 +139,17 @@ app.get('/', async (c) => {
 
     const now = Date.now();
     const year = coYear(now);
-    const [salesRow, profileRow] = await Promise.all([
+    const [salesRow, months, profileRow] = await Promise.all([
       salesTotalsQuery(c.env.DB, year, tenant.id).first<SalesTotals>(),
+      monthlySales(c.env.DB, year, tenant.id),
       c.env.DB.prepare('SELECT dian_e_invoicing FROM user_profiles WHERE id = ?')
         .bind(tenant.id)
         .first<{ dian_e_invoicing: number | null }>(),
     ]);
 
-    return c.json<APIResponse<DianThresholds>>({
+    return c.json<APIResponse<DianThresholds & { months: MonthSales[] }>>({
       success: true,
-      data: evaluate(salesRow, year, profileRow?.dian_e_invoicing === 1, now),
+      data: { ...evaluate(salesRow, year, profileRow?.dian_e_invoicing === 1, now), months },
     });
   } catch (error) {
     console.error('[dian-thresholds] Error calculando los topes:', error);
