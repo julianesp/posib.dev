@@ -14,6 +14,7 @@ import { Customer, CustomerPurchaseHistory, Sale, SaleItemWithProduct, UserProfi
 import { formatCurrency } from '@/lib/utils';
 import { ArrowLeft, User, Mail, Phone, MapPin, Award, ShoppingBag, Calendar, CreditCard, FileText, Edit } from 'lucide-react';
 import Link from 'next/link';
+import { RemoveCustomerDialog } from '@/components/customers/remove-customer-dialog';
 import { InvoiceModal } from '@/components/sales/invoice-modal';
 import { getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 
@@ -191,10 +192,13 @@ export default function CustomerDetailPage() {
                 <User className="h-5 w-5" />
                 Información Personal
               </CardTitle>
-              <Button variant="outline" size="sm" onClick={handleEditClick}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleEditClick}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+                <RemoveCustomerDialog customer={customer} purchases={purchaseHistory.length} />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">

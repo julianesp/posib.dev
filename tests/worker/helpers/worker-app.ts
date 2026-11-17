@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import salesRoutes from '../../../cloudflare-migration/src/routes/sales';
 import creditPaymentRoutes from '../../../cloudflare-migration/src/routes/credit-payments';
+import customerRoutes from '../../../cloudflare-migration/src/routes/customers';
 import { D1DatabaseFake } from './d1-sqlite';
 
 export const TENANT_ID = 'tenant_tienda';
@@ -18,6 +19,7 @@ export function createWorker(tenantId = TENANT_ID, db = new D1DatabaseFake()) {
   });
   app.route('/api/sales', salesRoutes);
   app.route('/api/credit-payments', creditPaymentRoutes);
+  app.route('/api/customers', customerRoutes);
 
   const call = async (method: string, url: string, body?: unknown) => {
     const res = await app.request(

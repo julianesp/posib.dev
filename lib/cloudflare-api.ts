@@ -472,6 +472,19 @@ export async function deleteCustomer(id: string, getToken: GetTokenFn): Promise<
   invalidateCustomersCache();
 }
 
+/**
+ * Une un cliente repetido (`id`) con otro (`intoId`): el Worker le pasa las
+ * ventas, abonos, deuda y puntos, y borra el repetido.
+ */
+export async function mergeCustomer(id: string, intoId: string, getToken: GetTokenFn): Promise<Customer> {
+  const result = await fetchAPI<Customer>(`/api/customers/${id}/merge`, getToken, {
+    method: 'POST',
+    body: JSON.stringify({ into: intoId }),
+  });
+  invalidateCustomersCache();
+  return result;
+}
+
 // ============================================
 // CATEGORÍAS
 // ============================================
