@@ -11,6 +11,7 @@ import SignupConversionTracker from '@/components/SignupConversionTracker';
 import SiteVisitTracker from '@/components/SiteVisitTracker';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import { ACCENT_INIT_SCRIPT } from '@/lib/accent';
+import { A11Y_INIT_SCRIPT } from '@/lib/a11y';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -193,6 +194,7 @@ export default function RootLayout({
         <head>
           <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
           <script dangerouslySetInnerHTML={{ __html: ACCENT_INIT_SCRIPT }} />
+          <script dangerouslySetInnerHTML={{ __html: A11Y_INIT_SCRIPT }} />
         </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} ${instrumentSans.variable} ${bricolage.variable} ${outfit.variable} antialiased`}

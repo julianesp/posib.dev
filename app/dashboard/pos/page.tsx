@@ -64,10 +64,12 @@ import {
 import { posibLogoIconHtml } from "@/components/brand/posib-logo-html";
 import Swal from "@/lib/sweetalert";
 import { toast } from "sonner";
+import { posBeep, speakSaleTotal } from "@/lib/a11y-audio";
 import { BarcodeScannerZXing } from "@/components/products/barcode-scanner-zxing";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
 import { UnitSelectorModal } from "@/components/pos/unit-selector-modal";
 import { CashRegisterControl } from "@/components/pos/cash-register-control";
+import { AccessibilityMenu } from "@/components/a11y/AccessibilityMenu";
 import Link from "next/link";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
 import {
@@ -789,6 +791,7 @@ export default function POSPage() {
     console.log("🔧 [LECTOR USB] Código normalizado:", scannedBarcode);
 
     if (!scannedBarcode) {
+      posBeep("error");
       Swal.error("Código inválido", "El código de barras no es válido");
       setBarcodeInput("");
       barcodeRef.current?.focus();
@@ -814,6 +817,7 @@ export default function POSPage() {
         // Si se encuentra pero no tiene stock
         if (product && product.stock <= 0 && tracksInventory(product)) {
           console.log("❌ [LECTOR USB] Producto encontrado pero sin stock");
+          posBeep("error");
           Swal.error(
             "Producto sin stock",
             `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`,
@@ -837,9 +841,11 @@ export default function POSPage() {
       setBarcodeInput("");
 
       // Toast pequeño y no intrusivo
+      posBeep("ok");
       Swal.productAdded(product.name, 1);
     } else {
       console.log("❌ [LECTOR USB] Producto NO encontrado en ninguna lista");
+      posBeep("error");
       const result = await Swal.custom({
         title: "Producto no encontrado",
         html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-800 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
@@ -868,6 +874,7 @@ export default function POSPage() {
 
     if (!scannedBarcode) {
       console.log("❌ [CÁMARA] Código inválido después de normalizar");
+      posBeep("error");
       Swal.error("Código inválido", "El código de barras no es válido");
       setTimeout(() => setLastCameraScannedCode(""), 2000);
       return;
@@ -930,6 +937,7 @@ export default function POSPage() {
             "❌ [CÁMARA] Producto encontrado pero sin stock:",
             product.name,
           );
+          posBeep("error");
           Swal.error(
             "Producto sin stock",
             `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`,
@@ -951,6 +959,7 @@ export default function POSPage() {
       addToCart(product);
 
       // Toast pequeño y no intrusivo
+      posBeep("ok");
       Swal.productAdded(product.name, 1);
 
       // Cerrar el escáner después de agregar el producto
@@ -963,6 +972,7 @@ export default function POSPage() {
       console.log("❌ [CÁMARA] Producto NO encontrado en ninguna lista");
       // Cerrar el escáner para poder mostrar el formulario de registro.
       setShowCameraScanner(false);
+      posBeep("error");
       const result = await Swal.custom({
         title: "Producto no encontrado",
         html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-800 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
@@ -1522,6 +1532,7 @@ export default function POSPage() {
     setDiscountAmount(0);
     removeHeldSale(activeSaleIdRef.current);
 
+    speakSaleTotal(total, true);
     await Swal.custom({
       title: "Venta de práctica lista",
       html: `
@@ -2026,6 +2037,7 @@ export default function POSPage() {
         </div>
       `;
 
+      speakSaleTotal(total);
       await Swal.custom({
         title:
           paymentMethod === "credito"
@@ -2360,8 +2372,9 @@ export default function POSPage() {
       )}
 
       {/* Modo práctica: aviso fijo mientras está activo; si no, un botón discreto */}
+      <div className="flex items-start justify-end gap-2">
       {practiceMode ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-4 py-3 text-amber-900">
+        <div className="flex flex-1 flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-4 py-3 text-amber-900">
           <GraduationCap className="h-6 w-6 shrink-0" />
           <div className="min-w-0 flex-1 text-sm">
             <p className="font-bold">Estás en modo práctica</p>
@@ -2383,7 +2396,6 @@ export default function POSPage() {
           </Button>
         </div>
       ) : (
-        <div className="flex justify-end">
           <button
             type="button"
             onClick={togglePracticeMode}
@@ -2393,8 +2405,14 @@ export default function POSPage() {
             <GraduationCap className="h-4 w-4" />
             Modo práctica
           </button>
-        </div>
       )}
+        {/* En escritorio el POS no tiene la barra superior: el menú de
+            accesibilidad (sonidos al escanear, total en voz alta) va aquí. */}
+        <AccessibilityMenu
+          showPosOptions
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 hover:border-brand hover:text-brand"
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}

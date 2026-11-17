@@ -11,6 +11,7 @@ import { OpenWindowButton } from './open-window-button';
 import HelpButton from '@/components/help/HelpButton';
 import StoreSwitcher from '@/components/layout/StoreSwitcher';
 import { ThemeToggle } from '@/components/HourTheme';
+import { AccessibilityMenu } from '@/components/a11y/AccessibilityMenu';
 
 const UserButtonClient = dynamic(
   () => import('@clerk/nextjs').then((mod) => ({ default: mod.UserButton })),
@@ -129,6 +130,11 @@ export function Header({ onMenuClick, floating = false, pinned = false }: Header
       <NotificationPanel />
 
       <ThemeToggle className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" />
+
+      <AccessibilityMenu
+        showPosOptions
+        className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+      />
 
       {/* Solo visible cuando corre como PWA instalada (standalone). */}
       <OpenWindowButton />

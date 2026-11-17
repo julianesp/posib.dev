@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
 import PosibLogo from "@/components/brand/posib-logo";
 import { setManualTheme } from "@/lib/theme";
+import { AccessibilityMenu } from "@/components/a11y/AccessibilityMenu";
 import { useIsDark } from "@/lib/use-is-dark";
 import styles from "./NavbarRueda.module.scss";
 
@@ -153,6 +154,9 @@ export default function NavbarRueda() {
 
           {/* Botones a la derecha: tema + hamburguesa */}
           <div className="absolute right-0 z-[70] flex items-center gap-2">
+            {/* Accesibilidad: letra, contraste, leer en voz alta */}
+            <AccessibilityMenu className="p-2 bg-white rounded-full text-gray-700 hover:bg-gray-100 transition-colors duration-200 shadow-md border-2 border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" />
+
             {/* Botón alternar tema */}
             <button
               type="button"

@@ -991,3 +991,31 @@ html[data-theme="dark"] .sidebar-collapse-btn:not(:hover) {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Accesibilidad (lib/a11y.ts, menú en components/a11y/AccessibilityMenu.tsx)
+   Las clases las pone el tendero desde el menú y se aplican antes de pintar.
+   ========================================================================== */
+
+/* Alto contraste: en el elemento raíz el filtro no rompe position: fixed. */
+html.a11y-contrast {
+  filter: contrast(1.35) saturate(1.15);
+}
+html.a11y-contrast :focus-visible {
+  outline: 3px solid #f59e0b !important;
+  outline-offset: 2px !important;
+}
+
+html.a11y-underline a {
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+}
+
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
