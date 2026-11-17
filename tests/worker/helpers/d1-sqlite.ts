@@ -24,6 +24,7 @@ const MIGRATIONS = [
   'migrations/032_partnership.sql',
   'migrations/033_storefront_accounts.sql',
   'migrations/034_cash_sessions.sql',
+  'migrations/016_reviews_require_approval.sql',
 ];
 
 function toSqlValue(value: unknown): SQLInputValue {

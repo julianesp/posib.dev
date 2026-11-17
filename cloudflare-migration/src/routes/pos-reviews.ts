@@ -9,6 +9,7 @@
 
 import { Hono, type Context } from 'hono';
 import type { Env, Tenant, APIResponse, AppEnv } from '../types';
+import { escapeTelegramHtml, sendTelegramMessage } from '../utils/telegram';
 
 const app = new Hono<AppEnv>();
 
@@ -84,6 +85,13 @@ app.put('/me', async (c) => {
   const storeCity = profile?.store_city || null;
   const now = new Date().toISOString();
 
+  const previous = await c.env.DB.prepare(
+    'SELECT rating, comment FROM pos_reviews WHERE user_profile_id = ?'
+  )
+    .bind(tenant.id)
+    .first<{ rating: number; comment: string | null }>();
+  const changed = !previous || previous.rating !== rating || (previous.comment || null) !== comment;
+
   // Upsert: una reseña por tienda.
   await c.env.DB.prepare(
     `INSERT INTO pos_reviews
@@ -94,10 +102,30 @@ app.put('/me', async (c) => {
        comment = excluded.comment,
        store_name = excluded.store_name,
        store_city = excluded.store_city,
+       -- Si cambia lo que dice, vuelve a moderación: no se publica un texto que
+       -- el superadmin no ha visto.
+       is_approved = CASE WHEN pos_reviews.rating = excluded.rating
+                           AND COALESCE(pos_reviews.comment, '') = COALESCE(excluded.comment, '')
+                          THEN pos_reviews.is_approved ELSE 0 END,
        updated_at = excluded.updated_at`
   )
     .bind(tenant.id, rating, comment, storeName, storeCity, now, now)
     .run();
+
+  if (changed) {
+    const notify = notifyAdminsOfReview(c.env, {
+      isNew: !previous,
+      rating,
+      comment,
+      storeName,
+      storeCity,
+    }).catch((error) => console.error('[pos-reviews] Aviso por Telegram falló:', error));
+    try {
+      c.executionCtx.waitUntil(notify);
+    } catch {
+      await notify; // fuera de Workers (pruebas) no hay executionCtx
+    }
+  }
 
   const saved = await c.env.DB.prepare(
     'SELECT * FROM pos_reviews WHERE user_profile_id = ?'
@@ -121,6 +149,39 @@ app.delete('/me', async (c) => {
 
   return c.json<APIResponse<null>>({ success: true, data: null });
 });
+
+/**
+ * Avisa por Telegram a los superadmins con Telegram conectado que hay una
+ * reseña nueva o editada, pendiente de aprobar para salir en la landing.
+ */
+async function notifyAdminsOfReview(
+  env: Env,
+  review: { isNew: boolean; rating: number; comment: string | null; storeName: string; storeCity: string | null }
+): Promise<number> {
+  const admins = await env.DB.prepare(
+    `SELECT telegram_chat_id FROM user_profiles
+     WHERE is_superadmin = 1 AND telegram_chat_id IS NOT NULL AND telegram_chat_id != ''
+       AND COALESCE(telegram_enabled, 1) != 0`
+  ).all<{ telegram_chat_id: string }>();
+  const chatIds = (admins.results || []).map((r) => r.telegram_chat_id);
+  if (chatIds.length === 0) return 0;
+
+  const stars = '⭐'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+  const where = review.storeCity ? ` · ${escapeTelegramHtml(review.storeCity)}` : '';
+  const text =
+    `📝 <b>${review.isNew ? 'Nueva reseña de posib' : 'Reseña de posib editada'}</b>\n` +
+    `\n🏪 <b>${escapeTelegramHtml(review.storeName)}</b>${where}` +
+    `\n${stars} (${review.rating}/5)` +
+    (review.comment ? `\n\n“${escapeTelegramHtml(review.comment)}”` : '\n\n<i>Sin comentario.</i>') +
+    `\n\nPara que salga en la página de inicio, apruébala en Superadmin → Reseñas.`;
+
+  let sent = 0;
+  for (const chatId of chatIds) {
+    const result = await sendTelegramMessage(chatId, text, env.TELEGRAM_BOT_TOKEN);
+    if (result.success) sent++;
+  }
+  return sent;
+}
 
 // ============================================
 // Moderación (solo superadmin)
