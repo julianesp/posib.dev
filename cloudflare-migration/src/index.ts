@@ -25,6 +25,7 @@ import paymentTransactionsRoutes from './routes/payment-transactions';
 import adminStatsRoutes from './routes/admin-stats';
 import storeHealthRoutes from './routes/store-health';
 import dianThresholdsRoutes, { runDianThresholdAlerts } from './routes/dian-thresholds';
+import { runMonthEndSummary } from './utils/month-end-summary';
 import partnershipRoutes from './routes/partnership';
 import cashSessionsRoutes from './routes/cash-sessions';
 import storefrontRoutes from './routes/storefront';
@@ -460,6 +461,17 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
       console.log('DIAN threshold alerts result:', dianResult);
     } catch (error) {
       console.error('Error in DIAN threshold alerts:', error);
+    }
+  }
+
+  // 12h UTC = 7 AM Colombia - Día 1 de cada mes: resumen del mes que cerró
+  // (ventas, acumulado del año, proyección y tope DIAN) por Telegram al dueño.
+  if (hour === 12) {
+    try {
+      const monthResult = await runMonthEndSummary(env);
+      console.log('Month-end summary result:', monthResult);
+    } catch (error) {
+      console.error('Error in month-end summary:', error);
     }
   }
 
