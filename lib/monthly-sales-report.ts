@@ -351,6 +351,8 @@ export function buildMonthlyReport(
 const cop = (v: number) =>
   `$${Math.round(v).toLocaleString("es-CO")}`;
 const num = (v: number) => Math.round(v).toLocaleString("es-CO");
+const daysLabel = (d: number | null) =>
+  d === null ? "—" : d < 1 ? "Menos de 1 día" : `${Math.floor(d)} ${Math.floor(d) === 1 ? "día" : "días"}`;
 
 function buildTips(r: MonthlyReport): string[] {
   const tips: string[] = [];
@@ -440,8 +442,14 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     doc.text(rows, M, y);
     y += rows.length * size * 0.45 + 2;
   };
-  const section = (title: string, subtitle?: string) => {
-    ensure(22);
+  const ROW_H = 6.2;
+  /** Alto de una tabla de `rows` filas (con encabezado). */
+  const tableH = (rows: number) => (rows + 1) * ROW_H + 2;
+  /** Lo que se mantiene junto al título: la tabla entera si es corta, si no el inicio. */
+  const keepFor = (rows: number) => (tableH(rows) <= 110 ? tableH(rows) : tableH(3));
+  /** `keep`: alto del contenido que debe quedar en la misma página que el título. */
+  const section = (title: string, subtitle?: string, keep = 20) => {
+    ensure(14 + (subtitle ? 6 : 0) + keep);
     y += 6;
     doc.setFillColor(...BRAND);
     doc.rect(M, y - 4.2, 1.6, 5.6, "F");
@@ -460,7 +468,7 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     align: Array<"left" | "right">,
     highlight?: (row: number) => boolean,
   ) => {
-    const lineH = 6.2;
+    const lineH = ROW_H;
     const drawHeader = () => {
       doc.setFillColor(...BRAND_LIGHT);
       doc.rect(M, y - 4.3, W - 2 * M, lineH, "F");
@@ -475,7 +483,8 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
       });
       y += lineH;
     };
-    ensure(lineH * 2);
+    // Una tabla corta no se parte entre páginas.
+    ensure(keepFor(rows.length));
     drawHeader();
     rows.forEach((row, r) => {
       if (y + lineH > H - 16) {
@@ -520,14 +529,20 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
   // Resumen en cifras
   const change =
     r.previous && r.previous.revenue > 0 ? ((r.revenue - r.previous.revenue) / r.previous.revenue) * 100 : null;
+  const yearPct = r.year.eInvoiceCap > 0 ? (r.year.total / r.year.eInvoiceCap) * 100 : 0;
   const cards: Array<[string, string, string?]> = [
     ["Vendió", cop(r.revenue), change === null ? undefined : `${change >= 0 ? "+" : ""}${change.toFixed(0)}% vs. mes anterior`],
     ["Ventas", num(r.salesCount), `Promedio ${cop(r.avgTicket)} por venta`],
     r.profit !== null
       ? ["Ganó (estimado)", cop(r.profit), `Margen ${r.revenue > 0 ? ((r.profit / r.revenue) * 100).toFixed(0) : 0}%`]
       : ["Unidades vendidas", num(r.unitsSold), undefined],
+    [
+      `Lleva en ${r.year.year}`,
+      cop(r.year.total),
+      `${yearPct.toLocaleString("es-CO", { maximumFractionDigits: 0 })}% del tope DIAN`,
+    ],
   ];
-  const cardW = (W - 2 * M - 8) / 3;
+  const cardW = (W - 2 * M - 4 * (cards.length - 1)) / cards.length;
   cards.forEach(([label, value, note], i) => {
     const x = M + i * (cardW + 4);
     doc.setFillColor(...BRAND_LIGHT);
@@ -537,8 +552,9 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     doc.setTextColor(...MUTED);
     doc.text(label, x + 4, y);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.setTextColor(...BRAND);
+    doc.setFontSize(13);
+    // El acumulado del año se pinta de naranja si pasa el 70 % del tope.
+    doc.setTextColor(...(i === 3 && yearPct >= 70 ? WARN : BRAND));
     doc.text(value, x + 4, y + 8);
     if (note) {
       doc.setFont("helvetica", "normal");
@@ -571,63 +587,53 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     });
   }
 
-  // Lo que no le debe faltar
+  // Lo que no le debe faltar (con los que hay que pedir ya resaltados)
+  const topIds = new Set(r.topByUnits.map((l) => l.productId));
+  const mustHave = [...r.topByUnits, ...r.reorder.filter((l) => !topIds.has(l.productId))];
+  const daysInMonth = new Date(r.month.year, r.month.month + 1, 0).getDate();
   section(
     "Productos que no le deben faltar",
-    "Los que más unidades vendió en el mes. Si alguno se agota, pierde ventas.",
+    r.reorder.length > 0
+      ? "Los que más vende. En naranja, los que hay que pedir ya: no alcanzan para una semana."
+      : "Los que más unidades vendió en el mes. Si alguno se agota, pierde ventas.",
+    keepFor(mustHave.length),
   );
   table(
-    ["Producto", "Unidades", "Vendido", "Hay hoy", "Alcanza para"],
-    r.topByUnits.map((l) => [
-      l.name,
-      num(l.units),
-      cop(l.revenue),
-      l.stock === null ? "Sin control" : num(l.stock),
-      l.daysOfCover === null ? "—" : l.daysOfCover < 1 ? "Menos de 1 día" : `${Math.floor(l.daysOfCover)} días`,
-    ]),
-    [72, 22, 30, 24, 30],
+    ["Producto", "Vendió", "Al día", "Hay hoy", "Alcanza para"],
+    mustHave.map((l) => {
+      const perDay = l.units / daysInMonth;
+      return [
+        l.name,
+        num(l.units),
+        perDay < 1 ? perDay.toFixed(1).replace(".", ",") : num(perDay),
+        l.stock === null ? "Sin control" : num(l.stock),
+        daysLabel(l.daysOfCover),
+      ];
+    }),
+    [76, 22, 22, 24, 34],
     ["left", "right", "right", "right", "right"],
-    (i) => (r.topByUnits[i].daysOfCover ?? 99) < 7,
+    (i) => (mustHave[i].daysOfCover ?? 99) < 7,
   );
 
-  if (r.reorder.length > 0) {
-    section("Pedir ya", "De los más vendidos, estos no alcanzan para una semana con las unidades que hay.");
-    table(
-      ["Producto", "Vende al día", "Hay hoy", "Alcanza para"],
-      r.reorder.map((l) => {
-        const perDay = l.units / new Date(r.month.year, r.month.month + 1, 0).getDate();
-        return [
-          l.name,
-          perDay < 1 ? perDay.toFixed(1).replace(".", ",") : num(perDay),
-          num(l.stock ?? 0),
-          (l.daysOfCover ?? 0) < 1 ? "Menos de 1 día" : `${Math.floor(l.daysOfCover ?? 0)} días`,
-        ];
-      }),
-      [92, 28, 28, 30],
-      ["left", "right", "right", "right"],
-      () => true,
-    );
-  }
-
-  section("Los que más plata dejaron en ventas");
+  // Plata y ganancia en una sola tabla
+  const hasProfit = r.topByRevenue.some((l) => l.profit !== null);
+  section(
+    "Los que más plata dejaron",
+    hasProfit ? "Ganancia = lo vendido menos el precio de compra actual." : undefined,
+    keepFor(r.topByRevenue.length),
+  );
   table(
-    ["Producto", "Unidades", "Vendido"],
-    r.topByRevenue.map((l) => [l.name, num(l.units), cop(l.revenue)]),
-    [118, 30, 30],
-    ["left", "right", "right"],
+    hasProfit ? ["Producto", "Unidades", "Vendido", "Ganancia"] : ["Producto", "Unidades", "Vendido"],
+    r.topByRevenue.map((l) =>
+      hasProfit
+        ? [l.name, num(l.units), cop(l.revenue), l.profit === null ? "—" : cop(l.profit)]
+        : [l.name, num(l.units), cop(l.revenue)],
+    ),
+    hasProfit ? [88, 26, 32, 32] : [118, 30, 30],
+    hasProfit ? ["left", "right", "right", "right"] : ["left", "right", "right"],
   );
 
-  if (r.topByProfit.length > 0) {
-    section("Los que más ganancia dejaron", "Ganancia = lo vendido menos el precio de compra actual.");
-    table(
-      ["Producto", "Vendido", "Ganancia"],
-      r.topByProfit.map((l) => [l.name, cop(l.revenue), cop(l.profit ?? 0)]),
-      [118, 30, 30],
-      ["left", "right", "right"],
-    );
-  }
-
-  section("Cuándo vende más");
+  section("Cuándo vende más", undefined, keepFor(r.byWeekday.length));
   table(
     ["Día", "Ventas", "Vendido"],
     r.byWeekday.map((d) => [d.day.charAt(0).toUpperCase() + d.day.slice(1), num(d.count), cop(d.revenue)]),
@@ -643,7 +649,7 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     );
   }
 
-  section("Cómo le pagaron");
+  section("Cómo le pagaron", undefined, keepFor(r.byPayment.length));
   table(
     ["Forma de pago", "Ventas", "Total"],
     r.byPayment.map((p) => [p.label, num(p.count), cop(p.revenue)]),
@@ -662,6 +668,7 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     section(
       `Cuánto lleva vendido en ${yr.year}`,
       "Sirve para saber a cuánto cerraría el año y si le tocaría facturar electrónicamente.",
+      keepFor(yr.months.filter((x) => x.revenue > 0).length),
     );
     table(
       ["Mes", "Vendido"],
@@ -697,6 +704,7 @@ export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
     section(
       "Mercancía que no se movió",
       "Productos con unidades en la tienda que no se vendieron ni una vez en el mes.",
+      14,
     );
     paragraph(
       `${num(r.idle.count)} ${r.idle.count === 1 ? "producto" : "productos"}${r.idle.value > 0 ? `, con ${cop(r.idle.value)} invertidos (a precio de compra)` : ""}. ${r.idle.examples.length > 0 ? `Por ejemplo: ${r.idle.examples.join(", ")}.` : ""}`,
