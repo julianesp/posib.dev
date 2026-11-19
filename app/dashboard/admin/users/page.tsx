@@ -19,6 +19,7 @@ import {
   Crown,
   Trash2,
   Store,
+  Landmark,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
@@ -90,6 +91,31 @@ export default function UsersManagementPage() {
     } catch (error) {
       console.error('Error updating store status:', error);
       toast.error('Error al actualizar la tienda online');
+    }
+  };
+
+  /** Facturación electrónica DIAN: solo se activa a mano, tienda por tienda. */
+  const handleToggleFe = async (usr: UserProfile) => {
+    const activar = !usr.has_fe_addon;
+    if (activar) {
+      const Swal = (await import('sweetalert2')).default;
+      const r = await Swal.fire({
+        title: '¿Activar facturación electrónica?',
+        html: `<b>${usr.email}</b> podrá configurar su firma digital y facturar electrónicamente ante la DIAN desde posib.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, activar',
+        cancelButtonText: 'Cancelar',
+      });
+      if (!r.isConfirmed) return;
+    }
+    try {
+      await updateUserProfile(usr.id, { has_fe_addon: activar }, getToken);
+      toast.success(activar ? 'Facturación electrónica activada' : 'Facturación electrónica desactivada');
+      fetchData();
+    } catch (error) {
+      console.error('Error updating FE:', error);
+      toast.error('Error al cambiar la facturación electrónica');
     }
   };
 
@@ -342,6 +368,17 @@ export default function UsersManagementPage() {
                               >
                                 <Store className="h-4 w-4 mr-1" />
                                 {usr.store_enabled ? 'Tienda ON' : 'Tienda OFF'}
+                              </Button>
+                            )}
+                            {!usr.is_superadmin && (
+                              <Button
+                                size="sm"
+                                variant={usr.has_fe_addon ? 'default' : 'outline'}
+                                onClick={() => handleToggleFe(usr)}
+                                title={usr.has_fe_addon ? 'Desactivar facturación electrónica' : 'Activar facturación electrónica DIAN'}
+                              >
+                                <Landmark className="h-4 w-4 mr-1" />
+                                {usr.has_fe_addon ? 'Facturación ON' : 'Facturación OFF'}
                               </Button>
                             )}
                             {!usr.is_superadmin && usr.id !== currentUserProfile?.id && (

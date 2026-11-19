@@ -31,6 +31,7 @@ export interface UserProfile {
   // Addons como suscripciones separadas
   has_ai_addon?: boolean; // Usuario tiene addon de IA activo (legacy - usar addon_subscriptions)
   has_store_addon?: boolean; // Usuario tiene addon de Tienda Online activo
+  has_fe_addon?: boolean; // Facturación electrónica DIAN activada por el superadmin
   has_email_addon?: boolean; // Usuario tiene addon de Email Marketing activo
   store_addon_expires_at?: string; // Fecha de expiración del addon de tienda
   email_addon_expires_at?: string; // Fecha de expiración del addon de email

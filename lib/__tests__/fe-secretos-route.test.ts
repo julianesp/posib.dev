@@ -2,6 +2,8 @@
  * Ruta de Next /api/fe/secretos: valida la firma digital, la cifra y la manda
  * al Worker. Clerk y el Worker se simulan.
  */
+// Abrir un .p12 (derivación de claves en JS puro) es lento con la suite en paralelo.
+jest.setTimeout(30_000);
 import { randomBytes } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { descifrar, descifrarTexto } from '../fe-dian/boveda';

@@ -60,3 +60,8 @@ CREATE TABLE IF NOT EXISTS fe_config (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fe_config_cert_vence ON fe_config(cert_vence);
+
+-- Solo el superadmin activa la facturación electrónica a una tienda
+-- (/dashboard/admin/users → "Facturación ON/OFF"). El dueño no puede
+-- activársela solo: es un campo de cobro (BILLING_FIELDS en user-profiles.ts).
+ALTER TABLE user_profiles ADD COLUMN has_fe_addon INTEGER DEFAULT 0;

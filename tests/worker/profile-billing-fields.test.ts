@@ -55,6 +55,7 @@ describe('campos de cobro en el PUT del perfil', () => {
     [{ subscription_status: 'active', next_billing_date: '2099-01-01T00:00:00.000Z' }],
     [{ has_store_addon: 1, store_addon_expires_at: '2099-01-01T00:00:00.000Z' }],
     [{ has_ai_addon: true }],
+    [{ has_fe_addon: 1 }],
     [{ trial_end_date: '2099-01-01T00:00:00.000Z' }],
     [{ plan_id: 'basic-monthly', last_payment_date: '2026-11-05T00:00:00.000Z' }],
   ])('el tendero no puede escribir %j', async (body) => {
@@ -87,6 +88,13 @@ describe('campos de cobro en el PUT del perfil', () => {
     expect(res.status).toBe(200);
     expect(profile().subscription_status).toBe('active');
     expect(profile().has_store_addon).toBe(1);
+  });
+
+  it('solo el superadmin activa la facturación electrónica', async () => {
+    expect((await put({ has_fe_addon: 1 }, true)).status).toBe(200);
+    expect(profile().has_fe_addon).toBe(1);
+    expect((await put({ has_fe_addon: 0 }, true)).status).toBe(200);
+    expect(profile().has_fe_addon).toBe(0);
   });
 
   it('los demás campos del perfil se siguen guardando', async () => {

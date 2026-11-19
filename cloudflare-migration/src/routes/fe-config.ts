@@ -172,13 +172,26 @@ function aPublica(tenantId: string, f: Fila | null): FeConfigPublica {
   };
 }
 
-async function esDueno(db: D1Database, tenantId: string, clerkUserId: string): Promise<boolean> {
+type Acceso = 'ok' | 'no_dueno' | 'no_activada';
+
+/**
+ * Solo el dueño, y solo si el superadmin le activó la facturación electrónica
+ * (user_profiles.has_fe_addon, /dashboard/admin/users). El superadmin la tiene siempre.
+ */
+async function acceso(db: D1Database, tenantId: string, clerkUserId: string): Promise<Acceso> {
   const owner = await db
     // SELECT *: clerk_user_id_test (cuenta de prueba en dev) no está en el esquema base.
     .prepare('SELECT * FROM user_profiles WHERE id = ?')
     .bind(tenantId)
-    .first<{ clerk_user_id: string; clerk_user_id_test?: string | null }>();
-  return !!owner && (owner.clerk_user_id === clerkUserId || owner.clerk_user_id_test === clerkUserId);
+    .first<{ clerk_user_id: string; clerk_user_id_test?: string | null; has_fe_addon?: number | null; is_superadmin?: number | null }>();
+  if (!owner || (owner.clerk_user_id !== clerkUserId && owner.clerk_user_id_test !== clerkUserId)) return 'no_dueno';
+  return owner.has_fe_addon === 1 || owner.is_superadmin === 1 ? 'ok' : 'no_activada';
+}
+
+function rechazo(a: Exclude<Acceso, 'ok'>): { error: string; code: string } {
+  return a === 'no_dueno'
+    ? { error: 'Solo el dueño puede ver la facturación electrónica', code: 'FE_SOLO_DUENO' }
+    : { error: 'La facturación electrónica no está activada para esta tienda', code: 'FE_NO_ACTIVADA' };
 }
 
 async function leer(db: D1Database, tenantId: string): Promise<Fila | null> {
@@ -207,9 +220,8 @@ const app = new Hono<AppEnv>();
 app.get('/', async (c) => {
   const tenant = c.get('tenant');
   try {
-    if (!(await esDueno(c.env.DB, tenant.id, c.get('clerkUserId')))) {
-      return c.json<APIResponse<null>>({ success: false, error: 'Solo el dueño puede ver la facturación electrónica', data: null }, 403);
-    }
+    const a = await acceso(c.env.DB, tenant.id, c.get('clerkUserId'));
+    if (a !== 'ok') return c.json({ success: false, ...rechazo(a), data: null }, 403);
     return c.json<APIResponse<FeConfigPublica>>({ success: true, data: aPublica(tenant.id, await leer(c.env.DB, tenant.id)) });
   } catch (error) {
     console.error('[fe-config] Error leyendo la configuración:', error);
@@ -220,9 +232,8 @@ app.get('/', async (c) => {
 app.put('/', async (c) => {
   const tenant = c.get('tenant');
   try {
-    if (!(await esDueno(c.env.DB, tenant.id, c.get('clerkUserId')))) {
-      return c.json<APIResponse<null>>({ success: false, error: 'Solo el dueño puede cambiar la facturación electrónica', data: null }, 403);
-    }
+    const a = await acceso(c.env.DB, tenant.id, c.get('clerkUserId'));
+    if (a !== 'ok') return c.json({ success: false, ...rechazo(a), data: null }, 403);
     const parsed = validarFeConfig(await c.req.json().catch(() => null));
     if (!parsed.ok) return c.json<APIResponse<null>>({ success: false, error: parsed.error, data: null }, 400);
     const fila = await guardar(c.env.DB, tenant.id, parsed.value as Record<string, string | null>);
@@ -269,8 +280,13 @@ feInternal.put('/secretos', async (c) => {
   if (!body?.pin_cifrado && !body?.certificado) return c.json({ success: false, error: 'Nada que guardar' }, 400);
   const esCifrado = (s: unknown) => typeof s === 'string' && s.startsWith('v1:');
 
-  const existe = await c.env.DB.prepare('SELECT id FROM user_profiles WHERE id = ?').bind(tenantId).first();
+  const existe = await c.env.DB.prepare('SELECT has_fe_addon, is_superadmin FROM user_profiles WHERE id = ?')
+    .bind(tenantId)
+    .first<{ has_fe_addon: number | null; is_superadmin: number | null }>();
   if (!existe) return c.json({ success: false, error: 'Tienda no encontrada' }, 404);
+  if (existe.has_fe_addon !== 1 && existe.is_superadmin !== 1) {
+    return c.json({ success: false, ...rechazo('no_activada') }, 403);
+  }
 
   const cambios: Record<string, string | null> = {};
   if (body.pin_cifrado) {

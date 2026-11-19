@@ -90,6 +90,7 @@ describe('rutas', () => {
       email: 'dueno@tienda.co',
       role: 'admin',
       subscription_status: 'active',
+      has_fe_addon: 1,
     });
   });
 
@@ -101,6 +102,15 @@ describe('rutas', () => {
     expect(r.json.data.status).toBe('borrador');
     expect(r.json.data.faltantes).toContain('Firma digital (.p12)');
     expect(r.json.data.certificado).toBeNull();
+  });
+
+  it('sin activación del superadmin, ni el dueño la ve ni se pueden subir firmas', async () => {
+    await db.prepare('UPDATE user_profiles SET has_fe_addon = 0 WHERE id = ?').bind('t_tienda').run();
+    const r = await call('clerk_dueno', 'GET', '/api/fe-config');
+    expect(r.status).toBe(403);
+    expect(r.json.code).toBe('FE_NO_ACTIVADA');
+    expect((await call('clerk_dueno', 'PUT', '/api/fe-config', DATOS)).status).toBe(403);
+    expect((await secretos({ tenant_id: 't_tienda', pin_cifrado: 'v1:x' })).status).toBe(403);
   });
 
   it('solo el dueño puede ver o cambiar la configuración', async () => {

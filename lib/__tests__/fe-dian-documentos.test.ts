@@ -7,6 +7,8 @@
  * CUFE del XML se pueda recalcular leyendo el propio XML (así lo hace la DIAN),
  * que los totales cuadren y que las firmas verifiquen.
  */
+// Abrir un .p12 (derivación de claves en JS puro) es lento con la suite en paralelo.
+jest.setTimeout(30_000);
 import { DOMParser, type Element } from '@xmldom/xmldom';
 import { unzipSync, strFromU8 } from 'fflate';
 import { SignedXml } from 'xml-crypto';

@@ -72,6 +72,7 @@ app.get('/', async (c) => {
       store_enabled: !!result.store_enabled,
       store_shipping_enabled: !!result.store_shipping_enabled,
       store_pickup_enabled: !!result.store_pickup_enabled,
+      has_fe_addon: !!result.has_fe_addon,
     };
 
     return c.json<APIResponse<UserProfile>>({
@@ -143,6 +144,8 @@ const BILLING_FIELDS = [
   'ai_addon_expires_at',
   'store_addon_expires_at',
   'email_addon_expires_at',
+  // Facturación electrónica DIAN: la activa solo el superadmin (migración 035).
+  'has_fe_addon',
 ] as const;
 
 const MAX_TRIAL_MS = 31 * 24 * 60 * 60 * 1000;
@@ -277,6 +280,7 @@ app.put('/:id', async (c) => {
       'ai_addon_expires_at',
       'store_addon_expires_at',
       'email_addon_expires_at',
+      'has_fe_addon',
       // Storefront configuration fields
       'store_slug',
       'store_name',
@@ -356,6 +360,7 @@ app.put('/:id', async (c) => {
       store_enabled: !!updated!.store_enabled,
       store_shipping_enabled: !!updated!.store_shipping_enabled,
       store_pickup_enabled: !!updated!.store_pickup_enabled,
+      has_fe_addon: !!updated!.has_fe_addon,
     };
 
     return c.json<APIResponse<UserProfile>>({

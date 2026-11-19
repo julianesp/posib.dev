@@ -5,6 +5,8 @@
  * de C14N y XMLDSig: si xml-crypto valida las 3 referencias y el SignatureValue,
  * la firma es correcta según el estándar, que es lo que valida la DIAN.
  */
+// Abrir un .p12 (derivación de claves en JS puro) es lento con la suite en paralelo.
+jest.setTimeout(30_000);
 import { DOMParser } from '@xmldom/xmldom';
 import { SignedXml } from 'xml-crypto';
 import { canonicalizar } from '../fe-dian/c14n';
