@@ -99,13 +99,36 @@ function toHex(buffer: ArrayBuffer): string {
   return hex;
 }
 
+/** SHA-384 en hexadecimal minúsculas (WebCrypto: Workers, Node ≥ 18, navegador). */
+export async function sha384Hex(texto: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-384', new TextEncoder().encode(texto));
+  return toHex(digest);
+}
+
 /**
  * Calcula el CUFE (SHA-384 en hexadecimal minúsculas) usando WebCrypto,
  * disponible en el runtime de Cloudflare Workers y en Node ≥ 18.
  */
 export async function generateCufe(input: CufeInput): Promise<string> {
-  const base = buildCufeString(input);
-  const data = new TextEncoder().encode(base);
-  const digest = await crypto.subtle.digest('SHA-384', data);
-  return toHex(digest);
+  return sha384Hex(buildCufeString(input));
+}
+
+/**
+ * CUDE de notas crédito/débito (anexo §11.4.3): misma cadena que el CUFE pero
+ * con el PIN del software en lugar de la clave técnica (las notas no tienen
+ * rango de numeración autorizado). Se reutiliza `CufeInput` poniendo el PIN en
+ * `clTec`.
+ */
+export async function generateCude(input: Omit<CufeInput, 'clTec'> & { pinSoftware: string }): Promise<string> {
+  const { pinSoftware, ...resto } = input;
+  return sha384Hex(buildCufeString({ ...resto, clTec: pinSoftware }));
+}
+
+/**
+ * Código de seguridad del software (anexo §11.8):
+ *   SHA-384(Id Software + Pin + Número del documento)
+ * Va en sts:DianExtensions/sts:SoftwareSecurityCode.
+ */
+export async function softwareSecurityCode(softwareId: string, pin: string, numeroDocumento: string): Promise<string> {
+  return sha384Hex(softwareId + pin + numeroDocumento);
 }

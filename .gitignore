@@ -72,3 +72,9 @@ public/worker-*.js.map
 /e2e/test-results/
 /blob-report/
 /playwright/.cache/
+
+# Facturación electrónica DIAN: salidas locales del set de pruebas
+.fe-dian-salida/
+*.p12
+*.pfx
+!.env.fe-dian.example
