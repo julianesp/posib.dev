@@ -1102,6 +1102,23 @@ export interface FeConfig {
     cargado_at: string | null;
   };
   faltantes: string[];
+  /** Último set de pruebas enviado a la DIAN. */
+  pruebas: FePruebas | null;
+}
+
+export interface FeDocumentoPrueba {
+  numero: string;
+  tipo: 'Invoice' | 'CreditNote' | 'DebitNote';
+  zip_key: string | null;
+  estado: 'enviado' | 'aceptado' | 'rechazado' | 'error';
+  errores: string[];
+}
+
+export interface FePruebas {
+  enviado_at: string;
+  consultado_at: string | null;
+  cantidades: { facturas: number; notas_credito: number; notas_debito: number };
+  documentos: FeDocumentoPrueba[];
 }
 
 export type FeConfigEditable = Partial<
@@ -1137,6 +1154,24 @@ export async function saveFeSecretos(data: {
     throw new ApiError((json?.error || 'No se pudo guardar') + detalle, res.status);
   }
   return { config: json.data, avisos: json.avisos ?? [] };
+}
+
+/**
+ * Set de pruebas de habilitación DIAN (ruta de Next /api/fe/pruebas): 'enviar'
+ * firma y manda el set; 'consultar' trae el resultado de cada documento.
+ */
+export async function feSetPruebas(
+  accion: 'enviar' | 'consultar',
+  cantidades?: FePruebas['cantidades'],
+): Promise<FeConfig> {
+  const res = await fetch('/api/fe/pruebas', {
+    method: 'POST',
+    headers: tenantHeaders(),
+    body: JSON.stringify({ accion, cantidades }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.success) throw new ApiError(json?.error || 'No se pudo hablar con la DIAN', res.status);
+  return json.data;
 }
 
 /** Apertura y cierre de caja (Punto de Venta). Ver routes/cash-sessions.ts del Worker. */

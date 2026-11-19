@@ -42,6 +42,23 @@ export interface FeConfigPublica {
   };
   /** Qué falta para poder correr el set de pruebas. */
   faltantes: string[];
+  /** Último set de pruebas enviado a la DIAN (sin secretos). */
+  pruebas: PruebasDian | null;
+}
+
+export interface DocumentoPrueba {
+  numero: string;
+  tipo: 'Invoice' | 'CreditNote' | 'DebitNote';
+  zip_key: string | null;
+  estado: 'enviado' | 'aceptado' | 'rechazado' | 'error';
+  errores: string[];
+}
+
+export interface PruebasDian {
+  enviado_at: string;
+  consultado_at: string | null;
+  cantidades: { facturas: number; notas_credito: number; notas_debito: number };
+  documentos: DocumentoPrueba[];
 }
 
 const CAMPOS_TEXTO = [
@@ -169,7 +186,49 @@ function aPublica(tenantId: string, f: Fila | null): FeConfigPublica {
         }
       : null,
     faltantes: faltantes(f),
+    pruebas: leerPruebas(s('pruebas')),
   };
+}
+
+function leerPruebas(raw: string | null): PruebasDian | null {
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw) as PruebasDian;
+    return p && Array.isArray(p.documentos) ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Valida el JSON de pruebas que manda Next (forma y tamaños). */
+export function validarPruebas(p: unknown): PruebasDian | null {
+  if (!p || typeof p !== 'object') return null;
+  const x = p as PruebasDian;
+  const estados = ['enviado', 'aceptado', 'rechazado', 'error'];
+  const tipos = ['Invoice', 'CreditNote', 'DebitNote'];
+  if (typeof x.enviado_at !== 'string' || !Array.isArray(x.documentos) || x.documentos.length > 60) return null;
+  if (!x.cantidades || [x.cantidades.facturas, x.cantidades.notas_credito, x.cantidades.notas_debito].some((n) => !Number.isInteger(n) || n < 0 || n > 50)) return null;
+  for (const d of x.documentos) {
+    if (typeof d.numero !== 'string' || !tipos.includes(d.tipo) || !estados.includes(d.estado) || !Array.isArray(d.errores)) return null;
+  }
+  return {
+    enviado_at: x.enviado_at,
+    consultado_at: typeof x.consultado_at === 'string' ? x.consultado_at : null,
+    cantidades: x.cantidades,
+    documentos: x.documentos.map((d) => ({
+      numero: d.numero.slice(0, 40),
+      tipo: d.tipo,
+      zip_key: typeof d.zip_key === 'string' ? d.zip_key.slice(0, 100) : null,
+      estado: d.estado,
+      errores: d.errores.slice(0, 30).map((e) => String(e).slice(0, 500)),
+    })),
+  };
+}
+
+/** El set está aprobado si se enviaron todos los documentos pedidos y la DIAN aceptó todos. */
+export function setAprobado(p: PruebasDian): boolean {
+  const pedidos = p.cantidades.facturas + p.cantidades.notas_credito + p.cantidades.notas_debito;
+  return pedidos > 0 && p.documentos.length >= pedidos && p.documentos.every((d) => d.estado === 'aceptado');
 }
 
 type Acceso = 'ok' | 'no_dueno' | 'no_activada';
@@ -312,6 +371,40 @@ feInternal.put('/secretos', async (c) => {
     return c.json<APIResponse<FeConfigPublica>>({ success: true, data: aPublica(tenantId, fila) });
   } catch (error) {
     console.error('[fe-internal] Error guardando secretos:', error);
+    return c.json({ success: false, error: 'No se pudo guardar' }, 500);
+  }
+});
+
+/** Configuración COMPLETA (con secretos cifrados) para que Next firme y envíe. */
+feInternal.get('/config/:tenantId', async (c) => {
+  const tenantId = c.req.param('tenantId');
+  const perfil = await c.env.DB.prepare('SELECT has_fe_addon, is_superadmin FROM user_profiles WHERE id = ?')
+    .bind(tenantId)
+    .first<{ has_fe_addon: number | null; is_superadmin: number | null }>();
+  if (!perfil) return c.json({ success: false, error: 'Tienda no encontrada' }, 404);
+  if (perfil.has_fe_addon !== 1 && perfil.is_superadmin !== 1) return c.json({ success: false, ...rechazo('no_activada') }, 403);
+  const fila = await leer(c.env.DB, tenantId);
+  if (!fila) return c.json({ success: false, error: 'La tienda no tiene configuración de facturación' }, 404);
+  return c.json({ success: true, data: fila });
+});
+
+/** Guarda el resultado del set de pruebas; si la DIAN aceptó todo, la tienda queda habilitada. */
+feInternal.put('/pruebas', async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { tenant_id?: string; pruebas?: unknown } | null;
+  const tenantId = body?.tenant_id;
+  if (!tenantId) return c.json({ success: false, error: 'Falta tenant_id' }, 400);
+  const pruebas = validarPruebas(body?.pruebas);
+  if (!pruebas) return c.json({ success: false, error: 'Resultado de pruebas inválido' }, 400);
+  const fila = await leer(c.env.DB, tenantId);
+  if (!fila) return c.json({ success: false, error: 'La tienda no tiene configuración de facturación' }, 404);
+
+  const cambios: Record<string, string | null> = { pruebas: JSON.stringify(pruebas) };
+  if (setAprobado(pruebas) && fila.status === 'listo_pruebas') cambios.status = 'habilitado';
+  try {
+    const actualizada = await guardar(c.env.DB, tenantId, cambios);
+    return c.json<APIResponse<FeConfigPublica>>({ success: true, data: aPublica(tenantId, actualizada) });
+  } catch (error) {
+    console.error('[fe-internal] Error guardando pruebas:', error);
     return c.json({ success: false, error: 'No se pudo guardar' }, 500);
   }
 });

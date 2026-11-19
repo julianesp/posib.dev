@@ -25,6 +25,7 @@ const MIGRATIONS = [
   'migrations/033_storefront_accounts.sql',
   'migrations/034_cash_sessions.sql',
   'migrations/035_fe_config.sql',
+  'migrations/036_fe_pruebas.sql',
   'migrations/016_reviews_require_approval.sql',
 ];
 

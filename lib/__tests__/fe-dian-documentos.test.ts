@@ -195,3 +195,17 @@ describe('SOAP / WS-Security', () => {
     expect(r.errores[0]).toMatch(/FAJ43b/);
   });
 });
+
+describe('estadoDeRespuesta (resultado del set de pruebas)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { estadoDeRespuesta } = require('../fe-dian/servidor') as typeof import('../fe-dian/servidor');
+  it('aceptado, en proceso o rechazado con sus reglas', () => {
+    expect(estadoDeRespuesta({ valido: true, errores: [] }).estado).toBe('aceptado');
+    expect(estadoDeRespuesta({ valido: false, errores: [], descripcion: 'Batch en proceso de validación.' }).estado).toBe('enviado');
+    expect(estadoDeRespuesta({ valido: false, errores: ['Regla: FAJ43b, Rechazo: ...'], codigo: '99' })).toEqual({
+      estado: 'rechazado',
+      errores: ['Regla: FAJ43b, Rechazo: ...'],
+    });
+    expect(estadoDeRespuesta({ valido: false, errores: [], descripcion: 'Documento con errores' }).errores).toEqual(['Documento con errores']);
+  });
+});

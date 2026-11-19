@@ -3,7 +3,7 @@
  * /api/fe-internal/secretos) contra el esquema real de D1 (migración 035).
  */
 import { Hono } from 'hono';
-import feConfigRoutes, { calcularDv, feInternal, validarFeConfig } from '../../cloudflare-migration/src/routes/fe-config';
+import feConfigRoutes, { calcularDv, feInternal, setAprobado, validarFeConfig, validarPruebas } from '../../cloudflare-migration/src/routes/fe-config';
 import { D1DatabaseFake } from './helpers/d1-sqlite';
 
 const SECRETO = 'cron-secreto';
@@ -164,5 +164,74 @@ describe('rutas', () => {
     await db.prepare("UPDATE fe_config SET status = 'habilitado' WHERE tenant_id = ?").bind('t_tienda').run();
     const r = await call('clerk_dueno', 'PUT', '/api/fe-config', { telefono: null });
     expect(r.json.data.status).toBe('habilitado');
+  });
+});
+
+describe('set de pruebas (ruta interna)', () => {
+  let db: D1DatabaseFake;
+  const pedir = async (method: string, url: string, body?: unknown, secreto = SECRETO) => {
+    const a = new Hono();
+    a.route('/api/fe-internal', feInternal);
+    const res = await a.request(
+      url,
+      { method, headers: { 'Content-Type': 'application/json', 'X-Cron-Secret': secreto }, body: body ? JSON.stringify(body) : undefined },
+      { DB: db, CRON_SECRET: SECRETO },
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { status: res.status, json: (await res.json()) as any };
+  };
+  const doc = (numero: string, estado: string, tipo = 'Invoice') => ({ numero, tipo, zip_key: 'z-' + numero, estado, errores: [] });
+  const pruebas = (docs: unknown[]) => ({
+    enviado_at: '2026-11-19T20:00:00.000Z',
+    consultado_at: null,
+    cantidades: { facturas: 2, notas_credito: 1, notas_debito: 0 },
+    documentos: docs,
+  });
+
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    db = new D1DatabaseFake();
+    db.insert('user_profiles', { id: 't_tienda', clerk_user_id: 'clerk_dueno', email: 'd@t.co', role: 'admin', subscription_status: 'active', has_fe_addon: 1 });
+    db.insert('fe_config', {
+      ...DATOS, tenant_id: 't_tienda', status: 'listo_pruebas', software_pin_cifrado: 'v1:PIN',
+      cert_llave_cifrada: 'v1:LLAVE', created_at: 'x', updated_at: 'x',
+    });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('entrega la configuración completa solo con el secreto y solo si está activada', async () => {
+    const ok = await pedir('GET', '/api/fe-internal/config/t_tienda');
+    expect(ok.status).toBe(200);
+    expect(ok.json.data.cert_llave_cifrada).toBe('v1:LLAVE');
+    expect((await pedir('GET', '/api/fe-internal/config/t_tienda', undefined, 'otro')).status).toBe(401);
+    await db.prepare('UPDATE user_profiles SET has_fe_addon = 0').run();
+    expect((await pedir('GET', '/api/fe-internal/config/t_tienda')).status).toBe(403);
+  });
+
+  it('guarda el avance sin habilitar mientras falten aceptaciones', async () => {
+    const r = await pedir('PUT', '/api/fe-internal/pruebas', {
+      tenant_id: 't_tienda',
+      pruebas: pruebas([doc('SETP1', 'aceptado'), doc('SETP2', 'rechazado'), doc('NC1', 'enviado', 'CreditNote')]),
+    });
+    expect(r.status).toBe(200);
+    expect(r.json.data.status).toBe('listo_pruebas');
+    expect(r.json.data.pruebas.documentos).toHaveLength(3);
+  });
+
+  it('con todos los documentos pedidos aceptados, la tienda queda habilitada', async () => {
+    const r = await pedir('PUT', '/api/fe-internal/pruebas', {
+      tenant_id: 't_tienda',
+      pruebas: pruebas([doc('SETP1', 'aceptado'), doc('SETP2', 'aceptado'), doc('NC1', 'aceptado', 'CreditNote')]),
+    });
+    expect(r.json.data.status).toBe('habilitado');
+  });
+
+  it('rechaza resultados mal formados', async () => {
+    expect((await pedir('PUT', '/api/fe-internal/pruebas', { tenant_id: 't_tienda', pruebas: { documentos: 'x' } })).status).toBe(400);
+    expect(validarPruebas({ ...pruebas([doc('A', 'raro')]) })).toBeNull();
+  });
+
+  it('setAprobado exige la cantidad pedida, no solo que lo enviado esté bien', () => {
+    expect(setAprobado(validarPruebas(pruebas([doc('SETP1', 'aceptado')]))!)).toBe(false);
   });
 });

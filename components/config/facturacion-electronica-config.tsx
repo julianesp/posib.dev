@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { AlertTriangle, CheckCircle2, FileBadge, KeyRound, Landmark, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, FileBadge, KeyRound, Landmark, RefreshCw, Send, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -15,11 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  feSetPruebas,
   getFeConfig,
   saveFeConfig,
   saveFeSecretos,
   type FeConfig,
   type FeConfigEditable,
+  type FeDocumentoPrueba,
+  type FePruebas,
 } from "@/lib/cloudflare-api";
 
 const ESTADOS: Record<FeConfig["status"], { texto: string; clase: string }> = {
@@ -39,6 +42,19 @@ function diasHasta(iso: string | null | undefined): number | null {
   if (!iso) return null;
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
+
+const TIPO_DOC: Record<FeDocumentoPrueba["tipo"], string> = {
+  Invoice: "Factura",
+  CreditNote: "Nota crédito",
+  DebitNote: "Nota débito",
+};
+
+const ESTADO_DOC: Record<FeDocumentoPrueba["estado"], { texto: string; clase: string; Icono: typeof Clock }> = {
+  enviado: { texto: "La DIAN lo está revisando", clase: "text-gray-600", Icono: Clock },
+  aceptado: { texto: "Aceptado", clase: "text-emerald-700", Icono: CheckCircle2 },
+  rechazado: { texto: "Rechazado", clase: "text-red-700", Icono: XCircle },
+  error: { texto: "No se pudo enviar", clase: "text-red-700", Icono: XCircle },
+};
 
 function leerArchivoBase64(archivo: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -83,7 +99,8 @@ export function FacturacionElectronicaConfig() {
   const [pin, setPin] = useState("");
   const [p12, setP12] = useState<File | null>(null);
   const [p12Clave, setP12Clave] = useState("");
-  const [guardando, setGuardando] = useState<"datos" | "pin" | "firma" | null>(null);
+  const [guardando, setGuardando] = useState<"datos" | "pin" | "firma" | "pruebas" | null>(null);
+  const [cantidades, setCantidades] = useState<FePruebas["cantidades"]>({ facturas: 8, notas_credito: 1, notas_debito: 1 });
   const [avisos, setAvisos] = useState<string[]>([]);
   const archivoRef = useRef<HTMLInputElement>(null);
 
@@ -165,7 +182,25 @@ export function FacturacionElectronicaConfig() {
     }
   };
 
+  const pruebas = async (accion: "enviar" | "consultar") => {
+    setGuardando("pruebas");
+    try {
+      const c = await feSetPruebas(accion, accion === "enviar" ? cantidades : undefined);
+      cargar(c);
+      if (c.status === "habilitado") toast.success("¡La DIAN aceptó todas las pruebas! La tienda quedó habilitada.");
+      else if (accion === "enviar") toast.success("Pruebas enviadas. En 1 o 2 minutos consulta el resultado.");
+      else toast.success("Resultado actualizado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo hablar con la DIAN");
+    } finally {
+      setGuardando(null);
+    }
+  };
+
   const estado = config ? ESTADOS[config.status] : null;
+  const docs = config?.pruebas?.documentos ?? [];
+  const aceptados = docs.filter((d) => d.estado === "aceptado").length;
+  const puedeProbar = config?.status === "listo_pruebas";
   const venceEn = diasHasta(config?.certificado?.vence);
 
   return (
@@ -394,6 +429,95 @@ export function FacturacionElectronicaConfig() {
             <Upload className="mr-1.5 h-4 w-4" />
             {guardando === "firma" ? "Verificando la firma..." : "Subir firma digital"}
           </Button>
+        </section>
+
+        {/* 4. Pruebas con la DIAN */}
+        <section className="space-y-4">
+          <h3 className="font-semibold">4. Pruebas con la DIAN</h3>
+          {config?.status === "borrador" && (
+            <p className="text-sm text-gray-500">Cuando completes los pasos 1 a 3 podrás enviar las pruebas de habilitación.</p>
+          )}
+          {(config?.status === "habilitado" || config?.status === "produccion") && (
+            <div className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>
+                La DIAN aceptó las pruebas. Revisa en el portal de la DIAN que el set diga <b>Aceptado</b> y pide la
+                resolución de numeración para empezar a facturar.
+              </span>
+            </div>
+          )}
+          {puedeProbar && (
+            <>
+              <p className="text-sm text-gray-500">
+                posib arma facturas y notas de prueba, las firma con tu firma digital y las manda a la DIAN. Usa las
+                cantidades que pide el portal de la DIAN en el set de pruebas.
+              </p>
+              <div className="grid grid-cols-3 gap-3 sm:max-w-md">
+                {(
+                  [
+                    ["facturas", "Facturas", 1, 30],
+                    ["notas_credito", "Notas crédito", 0, 10],
+                    ["notas_debito", "Notas débito", 0, 10],
+                  ] as const
+                ).map(([campo, etiqueta, min, max]) => (
+                  <Campo key={campo} id={`fe-cant-${campo}`} label={etiqueta}>
+                    <Input
+                      id={`fe-cant-${campo}`}
+                      type="number"
+                      inputMode="numeric"
+                      min={min}
+                      max={max}
+                      value={cantidades[campo]}
+                      onChange={(e) => setCantidades((c) => ({ ...c, [campo]: Math.max(min, Math.min(max, Number(e.target.value) || 0)) }))}
+                    />
+                  </Campo>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" onClick={() => pruebas("enviar")} disabled={guardando !== null} className="cursor-pointer">
+                  <Send className="mr-1.5 h-4 w-4" />
+                  {guardando === "pruebas" ? "Hablando con la DIAN..." : docs.length ? "Enviar pruebas de nuevo" : "Enviar pruebas a la DIAN"}
+                </Button>
+                {docs.length > 0 && (
+                  <Button type="button" variant="outline" onClick={() => pruebas("consultar")} disabled={guardando !== null} className="cursor-pointer">
+                    <RefreshCw className="mr-1.5 h-4 w-4" /> Consultar resultado
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+
+          {docs.length > 0 && (
+            <div className="rounded-lg border">
+              <p className="border-b px-4 py-2 text-sm text-gray-600">
+                {aceptados} de {docs.length} aceptados · enviado el {fecha(config?.pruebas?.enviado_at)}
+              </p>
+              <ul className="divide-y">
+                {docs.map((d) => {
+                  const e = ESTADO_DOC[d.estado];
+                  return (
+                    <li key={d.numero} className="px-4 py-2 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span>
+                          {TIPO_DOC[d.tipo]} <span className="font-mono text-gray-500">{d.numero}</span>
+                        </span>
+                        <span className={`flex items-center gap-1 font-medium ${e.clase}`}>
+                          <e.Icono className="h-4 w-4" /> {e.texto}
+                        </span>
+                      </div>
+                      {d.errores.length > 0 && (
+                        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-gray-600">
+                          {d.errores.map((er) => (
+                            <li key={er}>{er}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </section>
       </CardContent>
     </Card>
