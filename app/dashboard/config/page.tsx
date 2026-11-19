@@ -619,7 +619,7 @@ export default function ConfigPage() {
               </div>
             </div>
             <a
-              href="https://wa.me/573152523498?text=Hola,%20necesito%20ayuda%20con%20reportes%20a%20la%20DIAN"
+              href={`https://wa.me/573152523498?text=${encodeURIComponent("Hola, necesito ayuda con reportes a la DIAN. Soy usuario de posib.dev")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="shrink-0 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
