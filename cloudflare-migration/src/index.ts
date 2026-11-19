@@ -26,6 +26,7 @@ import adminStatsRoutes from './routes/admin-stats';
 import storeHealthRoutes from './routes/store-health';
 import dianThresholdsRoutes, { runDianThresholdAlerts } from './routes/dian-thresholds';
 import { runMonthEndSummary } from './utils/month-end-summary';
+import feConfigRoutes, { feInternal } from './routes/fe-config';
 import partnershipRoutes from './routes/partnership';
 import cashSessionsRoutes from './routes/cash-sessions';
 import storefrontRoutes from './routes/storefront';
@@ -240,6 +241,10 @@ app.post('/api/email/debt-reminders', emailCronHandler);
 // Las llaman el flujo OAuth de Next.js y el cron del Worker.
 app.route('/api/backup-internal', backupPublic);
 
+// Facturación electrónica: Next guarda aquí la firma digital y el PIN YA cifrados
+// (X-Cron-Secret). Ver routes/fe-config.ts.
+app.route('/api/fe-internal', feInternal);
+
 // Team invitations public endpoint (NO auth - para usuarios no autenticados)
 app.get('/api/team-invitations/validate', async (c) => {
   const token = c.req.query('token');
@@ -318,6 +323,7 @@ app.route('/api/customers', customersRoutes);
 app.route('/api/sales', salesRoutes);
 app.route('/api/dian-thresholds', dianThresholdsRoutes);
 app.route('/api/partnership', partnershipRoutes);
+app.route('/api/fe-config', feConfigRoutes);
 app.route('/api/cash-sessions', cashSessionsRoutes);
 app.route('/api/categories', categoriesRoutes);
 app.route('/api/suppliers', suppliersRoutes);

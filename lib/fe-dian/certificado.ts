@@ -33,6 +33,8 @@ export interface CredencialesFirma {
 
 export interface InfoCertificado {
   titular: string;
+  /** Sujeto completo (RFC 4514); suele incluir la cédula o el NIT del titular. */
+  sujeto: string;
   emisor: string;
   validoDesde: Date;
   validoHasta: Date;
@@ -123,6 +125,7 @@ function inspeccionar(c: forge.pki.Certificate, ahora = new Date()): InfoCertifi
   const algoritmo = forge.pki.oids[c.siginfo.algorithmOid] ?? c.siginfo.algorithmOid;
   const info: InfoCertificado = {
     titular: aCertificadoX509(c).titular,
+    sujeto: nombreRfc4514(c.subject.attributes),
     emisor: nombreRfc4514(c.issuer.attributes),
     validoDesde: c.validity.notBefore,
     validoHasta: c.validity.notAfter,

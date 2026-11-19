@@ -1069,6 +1069,75 @@ export async function savePartnership(data: Partnership, getToken: GetTokenFn): 
   return fetchAPI('/api/partnership', getToken, { method: 'PUT', body: JSON.stringify(data) });
 }
 
+/** Facturación electrónica DIAN (software propio). Ver routes/fe-config.ts del Worker. */
+export type FeTributo = '01' | '04' | 'ZA' | 'ZZ';
+
+export interface FeConfig {
+  tenant_id: string;
+  status: 'borrador' | 'listo_pruebas' | 'habilitado' | 'produccion';
+  tipo_persona: '1' | '2' | null;
+  nit: string | null;
+  dv: string | null;
+  razon_social: string | null;
+  nombre_comercial: string | null;
+  responsabilidades: string | null;
+  tributo: FeTributo | null;
+  municipio_codigo: string | null;
+  municipio: string | null;
+  departamento: string | null;
+  departamento_codigo: string | null;
+  direccion: string | null;
+  telefono: string | null;
+  correo: string | null;
+  software_id: string | null;
+  test_set_id: string | null;
+  tiene_pin: boolean;
+  certificado: null | {
+    proveedor: string | null;
+    titular: string | null;
+    emisor: string | null;
+    valido_desde: string | null;
+    vence: string | null;
+    cargado_at: string | null;
+  };
+  faltantes: string[];
+}
+
+export type FeConfigEditable = Partial<
+  Pick<
+    FeConfig,
+    | 'tipo_persona' | 'nit' | 'dv' | 'razon_social' | 'nombre_comercial' | 'responsabilidades' | 'tributo'
+    | 'municipio_codigo' | 'municipio' | 'departamento' | 'departamento_codigo' | 'direccion' | 'telefono'
+    | 'correo' | 'software_id' | 'test_set_id'
+  >
+>;
+
+export async function getFeConfig(getToken: GetTokenFn): Promise<FeConfig> {
+  return fetchAPI('/api/fe-config', getToken);
+}
+
+export async function saveFeConfig(data: FeConfigEditable, getToken: GetTokenFn): Promise<FeConfig> {
+  return fetchAPI('/api/fe-config', getToken, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+/**
+ * Sube la firma digital (.p12) y/o el PIN del software DIAN. Va a la ruta de
+ * Next /api/fe/secretos, que los valida y cifra antes de guardarlos en el Worker.
+ */
+export async function saveFeSecretos(data: {
+  p12Base64?: string;
+  p12Clave?: string;
+  pin?: string;
+}): Promise<{ config: FeConfig; avisos: string[] }> {
+  const res = await fetch('/api/fe/secretos', { method: 'POST', headers: tenantHeaders(), body: JSON.stringify(data) });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.success) {
+    const detalle = Array.isArray(json?.problemas) && json.problemas.length ? ` ${json.problemas.join(' ')}` : '';
+    throw new ApiError((json?.error || 'No se pudo guardar') + detalle, res.status);
+  }
+  return { config: json.data, avisos: json.avisos ?? [] };
+}
+
 /** Apertura y cierre de caja (Punto de Venta). Ver routes/cash-sessions.ts del Worker. */
 export interface CashMethodTotal {
   count: number;

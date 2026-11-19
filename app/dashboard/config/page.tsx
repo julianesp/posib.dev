@@ -37,6 +37,7 @@ import { PaymentQrConfig } from "@/components/config/payment-qr-config";
 import { TelegramConfig } from "@/components/config/telegram-config";
 import { DebtRemindersConfig } from "@/components/config/debt-reminders-config";
 import { PartnershipConfig } from "@/components/config/partnership-config";
+import { FacturacionElectronicaConfig } from "@/components/config/facturacion-electronica-config";
 import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup-config";
 import { AccentConfig } from "@/components/config/accent-config";
 import { WelcomeTourConfig } from "@/components/dashboard/welcome-tour";
@@ -293,6 +294,11 @@ export default function ConfigPage() {
 
       {/* Negocio de varios socios: reparto de la ganancia en Rentabilidad */}
       <PartnershipConfig />
+
+      {/* Facturación electrónica DIAN (software propio): datos del RUT, software y firma digital */}
+      <div id="facturacion-electronica">
+        <FacturacionElectronicaConfig />
+      </div>
 
       {/* Copia de seguridad de ventas a Google Drive */}
       <div id="google-drive" data-guide="config-backup">
