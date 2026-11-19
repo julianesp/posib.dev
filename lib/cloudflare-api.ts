@@ -771,6 +771,7 @@ export interface UserProfile {
   plan_id?: string;
   has_ai_addon?: boolean;
   has_store_addon?: boolean;
+  has_fe_addon?: boolean; // Facturación electrónica DIAN (la activa solo el superadmin)
   has_email_addon?: boolean;
   ai_addon_expires_at?: string;
   store_addon_expires_at?: string;
