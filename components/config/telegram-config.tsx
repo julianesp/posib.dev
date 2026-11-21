@@ -186,6 +186,9 @@ export function TelegramConfig() {
       const code = generateLinkCode();
       await patchProfile({ telegram_link_code: code, telegram_enabled: 1 });
       setLinkCode(code);
+      // Al reconectar desde el estado "conectado", pasar a la vista del código
+      // para que se vea el código y el botón "Abrir el bot en Telegram".
+      setConnected(false);
       toast.success("Código generado. Ábrelo en el bot para conectar.");
     } catch {
       toast.error("No se pudo generar el código");
