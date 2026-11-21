@@ -446,6 +446,26 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
           ).run();
 
           console.log('User profile created successfully:', profileId);
+
+          // Aviso al superadmin por Telegram de que se creó una cuenta nueva.
+          // Best-effort y en segundo plano: nunca bloquea ni rompe el registro.
+          if (!isSuperAdmin) {
+            const { notifySuperadmins, escapeTelegramHtml } = await import('../utils/telegram');
+            const fecha = new Date().toLocaleString('es-CO', {
+              timeZone: 'America/Bogota',
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            });
+            const text =
+              `🎉 <b>¡Nueva cuenta en posib!</b>\n` +
+              (fullName ? `\n👤 <b>${escapeTelegramHtml(fullName)}</b>` : '') +
+              `\n✉️ ${escapeTelegramHtml(userEmail)}` +
+              `\n🕒 ${escapeTelegramHtml(fecha)}` +
+              `\n\nEmpezó su prueba gratis de 30 días.`;
+            c.executionCtx.waitUntil(
+              notifySuperadmins(c.env.DB, text, c.env.TELEGRAM_BOT_TOKEN)
+            );
+          }
           userProfile = {
             id: profileId,
             is_superadmin: isSuperAdmin ? 1 : 0,

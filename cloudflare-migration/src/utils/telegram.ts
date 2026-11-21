@@ -108,3 +108,36 @@ export async function sendToChats(
   }
   return sent;
 }
+
+/**
+ * Envía un aviso interno a los superadmins con Telegram conectado (y no
+ * desactivado). Best-effort: nunca lanza. Devuelve cuántos se enviaron.
+ */
+export async function notifySuperadmins(
+  db: D1Database,
+  text: string,
+  botToken?: string
+): Promise<number> {
+  try {
+    if (!botToken) {
+      console.warn('notifySuperadmins: TELEGRAM_BOT_TOKEN no configurado');
+      return 0;
+    }
+    const admins = await db
+      .prepare(
+        `SELECT telegram_chat_id FROM user_profiles
+         WHERE is_superadmin = 1 AND telegram_chat_id IS NOT NULL AND telegram_chat_id != ''
+           AND COALESCE(telegram_enabled, 1) != 0`
+      )
+      .all<{ telegram_chat_id: string }>();
+    const chatIds = (admins.results || []).map((r) => String(r.telegram_chat_id));
+    if (chatIds.length === 0) {
+      console.warn('notifySuperadmins: ningún superadmin tiene Telegram vinculado');
+      return 0;
+    }
+    return await sendToChats(chatIds, text, botToken);
+  } catch (error) {
+    console.error('notifySuperadmins error:', error);
+    return 0;
+  }
+}
