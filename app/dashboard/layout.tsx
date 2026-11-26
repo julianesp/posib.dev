@@ -1,7 +1,7 @@
 "use client";
 
 import DashboardLoader from "@/components/brand/dashboard-loader";
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
@@ -25,6 +25,13 @@ import {
 import { SubscriptionStatus } from "@/lib/types";
 import { usePageTracking } from "@/lib/hooks/use-analytics";
 import { setSelectedTenantId } from "@/lib/cloudflare-api";
+import {
+  hasRealInternet,
+  readOfflineReady,
+  setOfflineMode,
+  useOfflineMode,
+} from "@/lib/offline-mode";
+import { OfflineModeBanner } from "@/components/OfflineModeBanner";
 import { readStoredAccent, setAccent } from "@/lib/accent";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
 import { GuideProvider } from "@/components/guide/GuideProvider";
@@ -87,6 +94,47 @@ function DashboardLayoutInner({
 
   // Rastrear automáticamente todas las visitas a páginas
   usePageTracking();
+
+  // ── Modo sin internet (corte de luz) ────────────────────────────────────
+  // Si el equipo arranca sin internet, Clerk no carga y checkAccess nunca
+  // termina. Si este equipo dejó el POS listo, se entra con la copia local.
+  const offlineMode = useOfflineMode();
+  const loadingRef = useRef(loading);
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+  useEffect(() => {
+    const ready = readOfflineReady();
+    if (!ready) return;
+    let cancelled = false;
+    const enter = () => {
+      if (cancelled) return;
+      if (ready.tenantId && !localStorage.getItem("selected_tenant_id")) {
+        localStorage.setItem("selected_tenant_id", ready.tenantId);
+      }
+      setOfflineMode(true);
+      setSubscriptionInfo({ canAccess: true, status: "active" });
+      setTenantReady(true);
+      setLoading(false);
+    };
+    if (!navigator.onLine) {
+      enter();
+      return () => {
+        cancelled = true;
+      };
+    }
+    // El router puede estar prendido sin que haya internet (navigator.onLine
+    // = true). Si a los 6 s sigue cargando, se comprueba la conexión real.
+    const timer = setTimeout(async () => {
+      if (!loadingRef.current) return;
+      if (!(await hasRealInternet())) enter();
+    }, 6000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // La piel del sistema (.app-shell) va también en <body>: los modales y menús
   // que se montan en un portal (Radix, SweetAlert, Clerk) quedan fuera del árbol.
@@ -363,6 +411,7 @@ function DashboardLayoutInner({
   // Se muestra en cualquier página (incluida la de suscripción), porque sin
   // perfil verificado tampoco tiene sentido enseñar los planes.
   if (
+    !offlineMode &&
     !loading &&
     !isSuperAdmin &&
     !isTeamMember &&
@@ -374,6 +423,7 @@ function DashboardLayoutInner({
 
   // Si no puede acceder y no está en la página de suscripción, mostrar modal (excepto superadmin y team members)
   if (
+    !offlineMode &&
     !loading &&
     !isSuperAdmin &&
     !isTeamMember &&
@@ -403,7 +453,7 @@ function DashboardLayoutInner({
       <GuideProvider nudgesEnabled={!loading && !isSuperAdmin}>
       <NoIndexMeta />
       {/* Modal de notificación de trial - solo se muestra para usuarios en trial (no team members) */}
-      {!loading && !isSuperAdmin && !isTeamMember &&
+      {!loading && !offlineMode && !isSuperAdmin && !isTeamMember &&
         // Ocultar para la cuenta de demostración (julii1295@gmail.com)
         user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" &&
         <TrialNotificationWrapper />}
@@ -429,6 +479,7 @@ function DashboardLayoutInner({
         )}
 
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden text-gray-900">
+          {offlineMode && <OfflineModeBanner />}
           {/* Mostrar banner solo cuando queden 3 días o menos (trial o suscripción activa) */}
           {!loading &&
             !isSuperAdmin &&
@@ -507,15 +558,15 @@ function DashboardLayoutInner({
         {!isSuperAdmin && <PWAInstallPrompt />}
 
         {/* Informe de ventas del mes anterior: solo el dueño, hasta que lo descargue. */}
-        {!loading && !isTeamMember && <MonthlyReportModal />}
+        {!loading && !offlineMode && !isTeamMember && <MonthlyReportModal />}
 
         {/* Anuncio de la nueva interfaz y del color por tienda: dueños con cuenta activa o en prueba. */}
-        {!loading && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && (
+        {!loading && !offlineMode && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && (
           <NewInterfaceAnnouncement />
         )}
 
         {/* Presentación de beneficios para usuarios nuevos (se apaga con "No mostrar" o en Configuración). */}
-        {!loading && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && <WelcomeTour />}
+        {!loading && !offlineMode && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && <WelcomeTour />}
       </div>
       </GuideProvider>
     </OfflineProvider>

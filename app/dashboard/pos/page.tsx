@@ -77,6 +77,15 @@ import {
   readCachedCollection,
   queueSale,
 } from "@/lib/offline-store";
+import { OfflineReadyButton } from "@/components/pos/offline-ready-button";
+import {
+  cachePosPageForOffline,
+  isOfflineMode,
+  isOfflineNow,
+  requestPersistentStorage,
+  useOfflineMode,
+  writeOfflineReady,
+} from "@/lib/offline-mode";
 
 // Iniciales de las categorías para los filtros del POS: la primera letra, y si
 // dos categorías empiezan igual, las letras justas para distinguirlas
@@ -156,6 +165,8 @@ export default function POSPage() {
   const { getToken } = useAuth();
 
   const { user } = useUser();
+  // Arrancó sin internet (corte de luz): se lee todo de la copia local.
+  const offlineMode = useOfflineMode();
   const [products, setProducts] = useState<Product[]>([]);
   const [hasAnyProducts, setHasAnyProducts] = useState(true); // Track if user has ANY products
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -649,13 +660,17 @@ export default function POSPage() {
 
   const fetchOffers = useCallback(async () => {
     try {
+      if (isOfflineMode()) throw new Error("sin internet");
       const offers = await getActiveOffers(getToken);
       setActiveOffers(offers || []);
+      cacheCollection("offers", offers || []);
+      return true;
     } catch (error) {
       console.error("Error fetching offers:", error);
-      // Si no hay ofertas o hay un error, simplemente usar un array vacío
+      // Sin conexión: usar las últimas ofertas guardadas (o ninguna).
       // Esto permite que el POS funcione normalmente sin ofertas
-      setActiveOffers([]);
+      setActiveOffers(await readCachedCollection<Offer>("offers"));
+      return false;
     }
   }, [getToken]);
 
@@ -691,6 +706,7 @@ export default function POSPage() {
 
   const fetchProducts = useCallback(async () => {
     try {
+      if (isOfflineMode()) throw new Error("sin internet");
       const raw = (await getProducts(getToken)) as Product[];
 
       // Normalizar sell_by_unit: SQLite devuelve 0/1, necesitamos boolean
@@ -709,6 +725,7 @@ export default function POSPage() {
       // Ordenar por nombre manualmente
       productsInStock.sort((a, b) => a.name.localeCompare(b.name));
       setProducts(productsInStock);
+      return data.length;
     } catch (error) {
       console.error("Error fetching products:", error);
       // Sin conexión: leer el último catálogo cacheado.
@@ -724,54 +741,133 @@ export default function POSPage() {
         productsInStock.sort((a, b) => a.name.localeCompare(b.name));
         setProducts(productsInStock);
       }
+      return null;
     }
   }, [getToken]);
 
   const fetchCustomers = useCallback(async () => {
     try {
+      if (isOfflineMode()) throw new Error("sin internet");
       const data = (await getCustomers(getToken)) as Customer[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       cacheCollection("customers", data);
       setCustomers(data);
+      return data.length;
     } catch (error) {
       console.error("Error fetching customers:", error);
       const cached = await readCachedCollection<Customer>("customers");
       if (cached.length > 0) setCustomers(cached);
+      return null;
     }
   }, [getToken]);
 
   const fetchCategories = useCallback(async () => {
     try {
+      if (isOfflineMode()) throw new Error("sin internet");
       const data = (await getCategories(getToken)) as Category[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       cacheCollection("categories", data);
       setCategories(data);
+      return true;
     } catch (error) {
       console.error("Error fetching categories:", error);
       const cached = await readCachedCollection<Category>("categories");
       if (cached.length > 0) setCategories(cached);
+      return false;
     }
   }, [getToken]);
 
   // Cargar perfil de usuario
   const fetchUserProfile = useCallback(async () => {
     try {
+      if (isOfflineMode()) throw new Error("sin internet");
       const profile = await getUserProfile(getToken);
       setUserProfile(profile);
     } catch (error) {
       console.error("Error fetching user profile:", error);
+      // Sin internet: el perfil que guardó el layout en la última carga.
+      try {
+        const raw = localStorage.getItem("posib-profile-cache");
+        const cached = raw ? JSON.parse(raw)?.profile : null;
+        if (cached) setUserProfile(cached as UserProfile);
+      } catch {
+        // Sin copia del perfil: el POS sigue funcionando.
+      }
     }
   }, [getToken]);
 
+  // Deja este equipo listo para abrir el POS sin internet: guarda la página
+  // (service worker) y anota cuándo se guardó el catálogo.
+  const markOfflineReady = useCallback(
+    async (productCount: number, customerCount: number) => {
+      const pageOk = await cachePosPageForOffline();
+      await requestPersistentStorage();
+      if (!pageOk) return false;
+      writeOfflineReady({
+        at: Date.now(),
+        tenantId: getSelectedTenantId(),
+        products: productCount,
+        customers: customerCount,
+      });
+      return true;
+    },
+    [],
+  );
+
+  // Botón "Preparar sin internet": vuelve a bajar todo y guarda la copia.
+  const prepareOffline = async () => {
+    if (isOfflineNow()) return false;
+    const [productCount, customerCount] = await Promise.all([
+      fetchProducts(),
+      fetchCustomers(),
+      fetchCategories(),
+      fetchOffers(),
+      fetchUserProfile(),
+    ]);
+    if (productCount === null || customerCount === null) return false;
+    return markOfflineReady(productCount, customerCount);
+  };
+
   useEffect(() => {
-    fetchOffers();
+    let cancelled = false;
+    Promise.all([
+      fetchProducts(),
+      fetchCustomers(),
+      fetchCategories(),
+      fetchOffers(),
+      fetchUserProfile(),
+    ]).then(([productCount, customerCount]) => {
+      // Cada vez que el POS abre con internet, la copia local se actualiza sola.
+      if (cancelled || isOfflineNow()) return;
+      if (productCount !== null && customerCount !== null) {
+        markOfflineReady(productCount, customerCount);
+      }
+    });
+    // Auto-focus en el input de código de barras
+    barcodeRef.current?.focus();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    fetchOffers,
+    fetchProducts,
+    fetchCustomers,
+    fetchCategories,
+    fetchUserProfile,
+    markOfflineReady,
+  ]);
+
+  // Si se detecta el arranque sin internet después de montar (las llamadas a
+  // la API pudieron quedarse esperando a Clerk), se recarga desde la copia.
+  useEffect(() => {
+    if (!offlineMode) return;
     fetchProducts();
     fetchCustomers();
     fetchCategories();
+    fetchOffers();
     fetchUserProfile();
-    // Auto-focus en el input de código de barras
-    barcodeRef.current?.focus();
   }, [
+    offlineMode,
     fetchOffers,
     fetchProducts,
     fetchCustomers,
@@ -1592,7 +1688,7 @@ export default function POSPage() {
     // Si no hay internet, encolamos la venta localmente y descontamos el
     // stock en la caché. Las ventas a crédito y los puntos requieren
     // validación del servidor, así que no se permiten offline.
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
+    if (isOfflineNow()) {
       await processSaleOffline();
       return;
     }
@@ -2921,7 +3017,8 @@ export default function POSPage() {
               </div>
               {/* Caja: debajo de las pestañas de ventas (y del botón "+"), con el
                   detalle de la sesión integrado. Sin permiso de caja no se ve. */}
-              <CashRegisterControl compact />
+              {!offlineMode && <CashRegisterControl compact />}
+              <OfflineReadyButton onPrepare={prepareOffline} />
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 <div ref={cartIconRef} className="relative">
                   <ShoppingCart

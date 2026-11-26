@@ -119,9 +119,17 @@ export async function readCachedCollection<T>(key: string): Promise<T[]> {
 // COLA DE VENTAS
 // ============================================
 
+/** Evento que avisa a la interfaz que cambió la cola de ventas sin conexión. */
+export const SALES_QUEUE_EVENT = 'posib-sales-queue-changed';
+
+function notifyQueueChanged() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SALES_QUEUE_EVENT));
+}
+
 /** Encola una venta hecha sin conexión. */
 export async function queueSale(sale: QueuedSale): Promise<void> {
   await tx(STORE_SALES_QUEUE, 'readwrite', (store) => store.put(sale));
+  notifyQueueChanged();
 }
 
 /** Devuelve todas las ventas en cola, ordenadas por fecha de creación. */
@@ -141,6 +149,7 @@ export async function getQueuedSales(): Promise<QueuedSale[]> {
 /** Elimina una venta de la cola tras sincronizarla. */
 export async function removeQueuedSale(localId: string): Promise<void> {
   await tx(STORE_SALES_QUEUE, 'readwrite', (store) => store.delete(localId));
+  notifyQueueChanged();
 }
 
 /** Cuenta las ventas pendientes de sincronizar. */

@@ -5,22 +5,30 @@ import { WifiOff, Wifi, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { toast } from 'sonner';
+import { isOfflineMode, useOfflineMode } from '@/lib/offline-mode';
 
 export default function OfflineIndicator() {
   const { isOnline, pendingSync, isSyncing, syncOfflineData } = useOfflineSync();
   const [showIndicator, setShowIndicator] = useState(false);
   const [userDismissed, setUserDismissed] = useState(false);
+  // Si el POS abrió desde la copia guardada, ya hay una franja propia arriba.
+  const offlineMode = useOfflineMode();
 
   useEffect(() => {
     if (!isOnline) {
       // Sin conexión: mostrar el aviso (naranja) y resetear el cierre manual.
       setUserDismissed(false);
       setShowIndicator(true);
-      toast.warning('Sin conexión a internet', {
-        description: 'El sistema continuará funcionando offline',
-        duration: 5000,
-      });
-      return;
+      // Se espera un momento: el layout decide en su efecto (que corre después
+      // de este) si entra en modo sin internet, y ahí el aviso sobra.
+      const t = setTimeout(() => {
+        if (isOfflineMode()) return;
+        toast.warning('Sin conexión a internet', {
+          description: 'El sistema continuará funcionando offline',
+          duration: 5000,
+        });
+      }, 0);
+      return () => clearTimeout(t);
     }
 
     // Online. Solo mostramos el indicador si hay algo accionable (datos
@@ -67,8 +75,9 @@ export default function OfflineIndicator() {
     setShowIndicator(false);
   };
 
-  // No mostrar si el usuario lo cerró manualmente
-  if (userDismissed) {
+  // No mostrar si el usuario lo cerró manualmente o si ya se ve la franja
+  // del modo sin internet.
+  if (userDismissed || offlineMode) {
     return null;
   }
 
