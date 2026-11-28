@@ -50,6 +50,18 @@ describe('POST /api/sales', () => {
     expect(stockOf(w, 'prod_pan')).toBe(4);
   });
 
+  it('varios computadores vendiendo a la vez: no se pierde stock ni se repite el número', async () => {
+    // 5 cajas venden el mismo producto en paralelo (stock inicial 20)
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => sell(w, { items: [item('prod_gaseosa', 2)] })),
+    );
+
+    expect(results.every((r) => r.status === 201)).toBe(true);
+    expect(stockOf(w, 'prod_gaseosa')).toBe(10);
+    const numbers = results.map((r) => r.json.data.sale_number);
+    expect(new Set(numbers).size).toBe(5);
+  });
+
   it('no descuenta stock de productos sin control de inventario', async () => {
     await sell(w, { items: [item('prod_servicio', 2, 10000)] });
     expect(stockOf(w, 'prod_servicio')).toBe(0);

@@ -220,15 +220,13 @@ app.post('/', async (c) => {
 
     const tenantDB = new TenantDB(c.env.DB, tenant.id);
 
-    // Generate sale number
+    // Fecha para el número de venta. El consecutivo se calcula DENTRO del INSERT
+    // (subconsulta) para que dos computadores vendiendo a la vez no repitan número.
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-    const saleCount = await tenantDB.count('sales');
-    const saleNumber = `VTA-${dateStr}-${String(saleCount + 1).padStart(6, '0')}`;
 
     const saleData: any = {
       id: generateId('sale'),
-      sale_number: saleNumber,
       cashier_id: body.cashier_id || tenant.id,
       customer_id: body.customer_id ?? null,
       subtotal: body.subtotal ?? 0,
@@ -255,35 +253,38 @@ app.post('/', async (c) => {
       saleData.amount_pending = null;
       saleData.due_date = null;
     }
+    saleData.tenant_id = tenant.id;
+    saleData.created_at = now.toISOString();
 
-    // Insert sale
-    await tenantDB.insert('sales', saleData);
+    const saleCols = Object.keys(saleData);
+    const saleStmt = c.env.DB.prepare(
+      `INSERT INTO sales (sale_number, ${saleCols.join(', ')})
+       VALUES ('VTA-${dateStr}-' || printf('%06d', (SELECT COUNT(*) + 1 FROM sales WHERE tenant_id = ?)),
+               ${saleCols.map(() => '?').join(', ')})`
+    ).bind(tenant.id, ...saleCols.map((k) => saleData[k]));
 
-    // Insert sale items
-    const itemsToInsert = body.items.map((item: any) => ({
-      id: generateId('item'),
-      sale_id: saleData.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      discount: item.discount || 0,
-      subtotal: item.subtotal,
-    }));
+    const itemStmts = body.items.map((item: any) =>
+      c.env.DB.prepare(
+        `INSERT INTO sale_items (id, tenant_id, sale_id, product_id, quantity, unit_price, discount, subtotal, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        generateId('item'), tenant.id, saleData.id, item.product_id, item.quantity,
+        item.unit_price, item.discount || 0, item.subtotal, now.toISOString()
+      )
+    );
 
-    await tenantDB.batchInsert('sale_items', itemsToInsert);
+    // Descuento de stock ATÓMICO (stock = stock - N): si dos cajas venden el mismo
+    // producto al mismo tiempo, ninguna pisa el descuento de la otra.
+    // track_inventory = 0: producto sin control de inventario (se vende sin stock)
+    const stockStmts = body.items.map((item: any) =>
+      c.env.DB.prepare(
+        `UPDATE products SET stock = stock - ?, updated_at = ?
+         WHERE tenant_id = ? AND id = ? AND COALESCE(track_inventory, 1) != 0`
+      ).bind(item.quantity, now.toISOString(), tenant.id, item.product_id)
+    );
 
-    // Update product stock for each item
-    for (const item of body.items) {
-      // Get current product
-      const product = await tenantDB.getById<any>('products', item.product_id);
-      // track_inventory = 0: producto sin control de inventario (se vende sin stock)
-      if (product && product.track_inventory !== 0) {
-        const newStock = product.stock - item.quantity;
-        await tenantDB.update('products', item.product_id, {
-          stock: newStock
-        });
-      }
-    }
+    // Todo en un solo batch (transacción): venta + items + stock, o nada.
+    await c.env.DB.batch([saleStmt, ...itemStmts, ...stockStmts]);
 
     // Get complete sale with items
     const sale = await tenantDB.getById<Sale>('sales', saleData.id);
@@ -654,23 +655,22 @@ app.put('/:id', async (c) => {
       // Obtener los items del pedido
       const items = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
 
-      // Descontar stock de cada producto
+      // Validar stock suficiente (lectura) y descontar de forma ATÓMICA: el UPDATE
+      // solo aplica si aún alcanza el stock, así dos cajas no lo dejan en negativo.
       for (const item of items) {
         const product = await tenantDB.getById<any>('products', item.product_id);
         if (product && product.track_inventory !== 0) {
-          const newStock = product.stock - item.quantity;
+          const res = await c.env.DB.prepare(
+            `UPDATE products SET stock = stock - ?, updated_at = ?
+             WHERE tenant_id = ? AND id = ? AND stock >= ?`
+          ).bind(item.quantity, new Date().toISOString(), tenant.id, item.product_id, item.quantity).run();
 
-          // Validar que hay suficiente stock
-          if (newStock < 0) {
+          if (!res.meta || res.meta.changes === 0) {
             return c.json<APIResponse>({
               success: false,
               error: `No hay suficiente stock para el producto ${product.name}. Stock actual: ${product.stock}, requerido: ${item.quantity}`,
             }, 400);
           }
-
-          await tenantDB.update('products', item.product_id, {
-            stock: newStock
-          });
         }
       }
     }
@@ -744,18 +744,12 @@ app.delete('/:id', async (c) => {
     // Obtener los items de la venta para restaurar el inventario
     const saleItems = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
 
-    // Restaurar el stock de cada producto
+    // Restaurar el stock de forma ATÓMICA (stock = stock + N)
     for (const item of saleItems) {
-      const product = await tenantDB.getById<any>('products', item.product_id);
-      if (product && product.track_inventory !== 0) {
-        // Restaurar el stock (sumar la cantidad que se había vendido)
-        const restoredStock = product.stock + item.quantity;
-        await tenantDB.update('products', item.product_id, {
-          stock: restoredStock
-        });
-
-        console.log(`📦 Stock restaurado para producto ${product.name}: ${product.stock} → ${restoredStock}`);
-      }
+      await c.env.DB.prepare(
+        `UPDATE products SET stock = stock + ?, updated_at = ?
+         WHERE tenant_id = ? AND id = ? AND COALESCE(track_inventory, 1) != 0`
+      ).bind(item.quantity, new Date().toISOString(), tenant.id, item.product_id).run();
     }
 
     // Si la venta tenía puntos ganados y un cliente, restar esos puntos
