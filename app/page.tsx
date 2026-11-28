@@ -12,6 +12,7 @@ import {
   Gift,
   Smartphone,
   Calendar,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -383,6 +384,28 @@ export default function Home() {
               Sin tarjeta de crédito · Cancela cuando quieras · Soporte en
               español
             </p>
+          </div>
+        </section>
+      </FadeInSection>
+
+      {/* Facturación electrónica: contacto directo por WhatsApp */}
+      <FadeInSection>
+        <section className="lp-section-sep border-t">
+          <div className="container mx-auto px-4 py-10 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-center sm:gap-6">
+            <p className="lp-text text-lg font-semibold">
+              ¿Necesita facturación electrónica? Escríbeme al WhatsApp.
+            </p>
+            <a
+              className="inline-flex items-center justify-center rounded-md bg-brand px-8 h-11 text-sm font-medium !text-white transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              href={`https://wa.me/${landingConfig.contact.whatsapp.phoneNumber}?text=${encodeURIComponent(
+                  "Hola, necesito facturación electrónica",
+                )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle className="mr-2 h-5 w-5" aria-hidden="true" />
+              Escribir por WhatsApp
+            </a>
           </div>
         </section>
       </FadeInSection>
